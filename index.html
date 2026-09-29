@@ -249,10 +249,10 @@ function storageChoices(p, region){
       const price = typeof ov[t.id] === "number" ? ov[t.id] : (hourly ? t.priceHr : t.price);
       if (typeof price !== "number") continue;
       out.push({key:o.id+"|"+t.id, name:o.name, tier:t.label, kind:o.kind, hourly, price,
-        minGiB:o.id === "elastic-san" ? 16*1024 : 0, opt:o});
+        minGiB:o.id === "elastic-san" ? 16*1024 : 0, def:!!t.default, opt:o});
     }
   }
-  return out.sort((a,b) => (a.kind === "block" ? 0 : 1) - (b.kind === "block" ? 0 : 1));
+  return out.sort((a,b) => (a.kind === "block" ? 0 : 1) - (b.kind === "block" ? 0 : 1) || b.def - a.def);
 }
 function storageCost(ch, tb, hours){
   if (!ch || tb <= 0) return 0;
