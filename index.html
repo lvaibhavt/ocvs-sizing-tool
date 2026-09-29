@@ -439,6 +439,7 @@ function baseStorageText(hours){
     const t = c ? `${c.name} ${c.tier}` : "vSAN only";
     return `<b>${P.providers[p].name}</b> ${esc(t)}${p === "gcve" ? " or storage-only vSAN nodes" : ""}`; }).join(" · ");
 }
+const regionName = (p, id) => (P.providers[p].regions.find(r => r.id === id) || {name:id}).name;
 const links = o => (o.links || []).length ? `<p class="lk">${o.links.map(([l,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(" · ")}</p>` : "";
 function summaries(){
   const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k]($(k).value)}</i>` : LBL[k]($(k).value));
@@ -706,7 +707,7 @@ function card(p, rank, r, cheap, ocvs, months){
   return `<div class="pc" style="--c:${COLOR[p]}">
    <div class="top"><div class="nm"><span><span class="dot" style="background:${COLOR[p]}"></span> ${pr.longName}</span><span class="rank${rank===0?" r1":""}">#${rank+1}</span></div>
      <div class="price num">${money(pl.total)}<small>/mo</small></div>${delta}
-     <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(last.ctx[p].region)}`}</div></div>
+     <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(regionName(p, last.ctx[p].region))}`}</div></div>
    <div class="need">${needBars(r)}</div>
    ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
    ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span></div>` : ""}
@@ -785,7 +786,7 @@ function tableView(ranked, months){
   let h = `<section class="t2"><div class="t2head"><div><h2>Comparison</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div><button class="pptb" data-ppt>Download PPT</button></div>
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${sec("Configuration")}
-  ${row("Region", (r, p) => esc(ctx[p].region))}
+  ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
   ${row("Node / shape", r => `<b>${esc(r.s.label)}</b>`)}
   ${row("Nodes in cluster", (r, p) => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}${r.plan.driver === "Minimum" ? ` (${P.providers[p].name} minimum)` : ""}`)}
   ${row("Sized by", r => r.plan.driver)}
