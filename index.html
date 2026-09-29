@@ -462,7 +462,7 @@ function render(){
   const ranked = ORDER.filter(p => shown[p]).sort((x,y) => shown[x].plan.total - shown[y].plan.total);
   const rpc = req.cpu ? req.ram/req.cpu : 0, spc = req.cpu ? req.sto*1000/req.cpu : 0;
   const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
-  const used = [...PKEYS, ...AKEYS].map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
+  const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis").map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
 
   let h = `<div class="sec"><div><h2>Your requirement</h2><p>After ${$("aGrowth").value}% growth. Highlighted assumptions differ from the defaults.</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span><span class="pill"><b>${profile}</b> · ${rpc.toFixed(1)} GB RAM per vCPU</span></div>
