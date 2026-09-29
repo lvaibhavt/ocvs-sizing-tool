@@ -755,15 +755,15 @@ function cardsModel(){
   const w = ranked[0], wr = shown[w], ocvs = shown.ocvs, second = ranked[1];
   const termName = term === "od" ? "On-demand" : T.label.split(",")[0];
   const tb = gb => gb >= 1024 ? `${+(gb / 1024).toFixed(1)} TB` : `${fmt(gb)} GB`;
-  const notes = [];
+  const notes = [], tbn = v => v < 10 ? String(+v.toFixed(1)) : fmt(v);
   const config = (r, p) => { const pl = r.plan, st = ctx[p].storage;
     let t = `${pl.hosts} × ${r.s.label}`;
     if (pl.kind === "so") t += ` + ${pl.so} × ${pl.soId}`;
-    if (pl.ext) t += ` + ${fmt(pl.ext)} TB ${st.name}`;
+    if (pl.ext) t += ` + ${tbn(pl.ext)} TB ${st.name}`;
     return t; };
   const storageText = (r, p) => { const pl = r.plan, st = ctx[p].storage, parts = [];
     if (r.s.raw || pl.so) parts.push(`${fmt(pl.usable)} TB usable vSAN${pl.so ? ` (incl. ${pl.so} storage-only nodes)` : ""}`);
-    if (pl.ext) { let e = `${fmt(pl.ext)} TB ${st.name} (${st.tier.replace(/ —.*/, "")})`;
+    if (pl.ext) { let e = `${tbn(pl.ext)} TB ${st.name} · ${st.tier.replace(/ —.*/, "")}`;
       if (minNote(st, pl.ext)) { notes.push(`¹ ${st.name} for Azure VMware Solution needs at least ${st.minGiB / 1024} TiB of base capacity (Microsoft: "Use Azure Elastic SAN with Azure VMware Solution"), so ${st.minGiB / 1024} TB is billed although ${pl.ext.toFixed(1)} TB is needed.`); e += " ¹"; }
       parts.push(e); }
     return parts.join(" + ") || "—"; };

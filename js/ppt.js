@@ -134,11 +134,11 @@
     banner(pptx, s);
     const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
     T("EXECUTIVE SUMMARY", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
-    T(m.headline, { x: M, y: 0.92, w: W - 2 * M, h: 0.75, fontSize: 30, bold: true, color: K.text, fit: "shrink" });
-    T(m.subhead, { x: M, y: 1.68, w: W - 2 * M, h: 0.35, fontSize: 14, color: K.muted });
+    T(m.headline, { x: M, y: 0.92, w: W - 2 * M, h: 0.7, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
+    T(m.subhead, { x: M, y: 1.62, w: W - 2 * M, h: 0.35, fontSize: 14, color: K.muted });
 
     // requirement panel (left)
-    const py = 2.35, ph = 4.35, lw = 4.3;
+    const py = 2.25, ph = 4.7, lw = 4.3;
     s.addShape(pptx.ShapeType.roundRect, { x: M, y: py, w: lw, h: ph, rectRadius: 0.1, fill: { color: K.soft }, line: { color: K.soft } });
     T("YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
     m.req.forEach(([v, l], i) => T([{ text: v, options: { fontSize: 30, bold: true, color: K.text, breakLine: true } }, { text: l, options: { fontSize: 12, color: K.muted } }],
@@ -150,7 +150,7 @@
     // monthly cost comparison (right)
     const rx = M + lw + 0.5, rw = W - M - rx;
     T("MONTHLY COST", { x: rx, y: py + 0.05, w: rw, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
-    const max = Math.max(...m.bars.map(b => b.value)), rowH = 0.95, nameW = 2.6, valW = 2.4, bw = rw - nameW - valW - 0.2;
+    const max = Math.max(...m.bars.map(b => b.value)), rowH = 1.02, nameW = 2.6, valW = 2.4, bw = rw - nameW - valW - 0.2;
     m.bars.forEach((b, i) => {
       const y = py + 0.5 + i * rowH;
       T([{ text: b.long, options: { fontSize: 13, bold: true, color: K.text, breakLine: true } }, { text: b.config, options: { fontSize: 10, color: K.muted } }],
@@ -161,7 +161,7 @@
     });
 
     // savings tiles
-    const ty = py + ph + 0.3, th = H - ty - 0.45, n = m.tiles.length, gap = 0.3;
+    const ty = py + ph + 0.3, th = Math.min(1.25, H - ty - 0.45), n = m.tiles.length, gap = 0.3;
     const tw = (W - 2 * M - gap * (n - 1)) / Math.max(n, 1);
     m.tiles.forEach((t, i) => {
       const x = M + i * (tw + gap);
