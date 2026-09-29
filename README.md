@@ -21,7 +21,7 @@ Prices come live from two companion tools, so updating them there updates this t
 
 ## Simple by default, advanced when you need it
 
-Out of the box the tool uses the basics: **3-year commitment with monthly payments, 744 hours per month, Frankfurt, 4:1 vCPU per core, 1:1 RAM, vSAN RAID-5**, with no growth buffer, HA spare host, free-space headroom or RAM reservation, and the **cheapest additional storage** on each cloud that suits running VMs, used only when it costs less than adding vSAN hosts:
+Out of the box the tool uses the basics: **3-year commitment with monthly payments, 744 hours per month, Frankfurt, 4:1 vCPU per core, 1:1 RAM, vSAN RAID-5**, with no growth buffer, HA spare host, free-space headroom or RAM reservation, and the **base additional storage** on each cloud (the cheapest option that suits running VMs), used only when it costs less than adding vSAN hosts:
 
 | Cloud | Default additional storage (Frankfurt) |
 |---|---|
@@ -30,7 +30,7 @@ Out of the box the tool uses the basics: **3-year commitment with monthly paymen
 | GCVE | Cheapest of Google Cloud NetApp Volumes Standard and storage-only vSAN nodes |
 | Amazon EVS | FSx for NetApp ONTAP · Single-AZ SSD |
 
-Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, and the storage option per cloud (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
+Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, the storage option per cloud, and a **storage discount %** per cloud (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
 
 **Download PPT** (both views) builds a comparison slide and an assumptions & sources slide in the same style as VMware Cloud Pricing Compare.
 
