@@ -148,6 +148,62 @@ td.na{color:var(--muted);text-align:left}
 .foot{margin-top:28px;font-size:12px;color:var(--muted);line-height:1.6}
 .hidden{display:none!important}
 @media (max-width:640px){.winner{grid-template-columns:1fr}.winner .big{text-align:left}.bar{grid-template-columns:90px 1fr 90px}}
+.views{display:inline-flex;gap:4px;margin-top:18px;padding:4px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.views a{color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;opacity:.75}
+.views a[aria-current="page"]{background:#fff;color:#15181d;opacity:1}
+/* ---------- View 2: navy/gold report style ---------- */
+body.v2{--bg:#f6f7fb;--card:#fff;--text:#222;--muted:#5a6378;--line:#d5d9e3;--soft:#f1f2f7;--navy:#1f2a5c;--gold:#e8b73a;--brown:#8a5a00;--base:#eaf1fb;--good:#2e7d32;--bad:#b3261e;--shadow:none;
+  font-family:Calibri,"Segoe UI",system-ui,sans-serif;font-size:15px;color:#333}
+body.v2 h1,body.v2 h2,body.v2 .cmp th,body.v2 .callout strong{font-family:Georgia,"Times New Roman",serif}
+body.v2 .hero{background:var(--navy);padding:28px 16px 80px}
+body.v2 .hero p,body.v2 .eyebrow{color:#cfd6ee;opacity:1}
+body.v2 .views a[aria-current="page"]{background:var(--gold);color:var(--navy)}
+body.v2 .seg button[aria-pressed="true"]{background:var(--navy);color:var(--gold)}
+body.v2 .panel{border-radius:10px}
+body.v2 .tile{border-radius:8px;background:#fff}
+body.v2 .tg{border-radius:6px}
+body.v2 .sec h2{color:var(--navy)}
+body.v2 .pill{border-radius:6px}
+.t2{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px}
+.t2head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.t2head h2{margin:0;font-size:26px;color:var(--navy)}
+.t2 .muted{color:var(--muted);font-size:13px}
+.cmp{border:1px solid var(--line)}
+.cmp thead th{background:var(--navy);color:#fff;font-size:14px;text-transform:none;letter-spacing:0;text-align:center;padding:10px 12px}
+.cmp thead th:first-child{text-align:left}
+.cmp thead th.base{color:var(--gold)}
+.cmp tbody th{text-align:left;font-weight:700;color:#222;background:#fff;font-size:14px;text-transform:none;letter-spacing:0;padding:8px 12px;border:1px solid var(--line)}
+.cmp td{text-align:center;padding:8px 12px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.cmp td.base{background:var(--base);font-weight:600;color:var(--navy)}
+.cmp tr.secrow td{background:var(--soft);text-align:left;font-family:Georgia,serif;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brown)}
+.cmp tr.tot td{font-size:15px}
+.cmp tbody tr{cursor:default}
+.cmp tbody tr:hover td{background:inherit}
+.cmp tbody tr:hover td.base{background:var(--base)}
+.cmp .drv{font-weight:800;color:var(--brown);border-bottom:2px solid var(--gold)}
+.cmp .sv{color:var(--good);font-weight:700}
+.cmp .ls{color:var(--bad);font-weight:700}
+.calls{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
+.callout{background:#edf6ee;border:1px solid #c8e3cb;border-radius:8px;padding:14px 16px}
+.callout strong{display:block;font-size:21px;color:var(--good)}
+.callout span{font-size:14px;color:#333}
+.callout.neg{background:#fbeceb;border-color:#f0c6c3}
+.callout.neg strong{color:var(--bad)}
+.shapebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:18px;font-size:13px;color:var(--muted)}
+.shapebar button{font:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:6px;padding:6px 12px;cursor:pointer}
+.shapebar button.on{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+body.v2 .dt{border-radius:10px}
+body.v2 .dt .hd{border-top-color:var(--navy)}
+body.v2 .dt th{background:var(--navy);color:#fff}
+@media (prefers-color-scheme:dark){
+  body.v2{--bg:#0f1220;--card:#171b2e;--text:#e8eaf2;--muted:#a3abc4;--line:#2c3350;--soft:#1e2340;--base:#1d2748;color:#dde}
+  body.v2 .cmp tbody th{background:var(--card);color:#e8eaf2}
+  body.v2 .cmp td.base{color:#cfe0ff}
+  body.v2 .tile{background:var(--soft)}
+  body.v2 .shapebar button{background:var(--card);color:#cfd6ee}
+  body.v2 .callout{background:#16301b;border-color:#24532c}
+  body.v2 .callout span{color:#ddd}
+  body.v2 .callout.neg{background:#3a1715;border-color:#6b2a25}}
 </style>
 </head>
 <body>
@@ -156,6 +212,7 @@ td.na{color:var(--muted);text-align:left}
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a></nav>
 </div></header>
 
 <main class="main">
@@ -469,6 +526,7 @@ function render(){
    <div class="req" style="margin-top:8px">${used}</div>`;
 
   if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
+  if (view === 2) { $("out").innerHTML = h + tableView(ranked, months); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
   h += `<div class="sec"><div><h2>Result</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div></div>
@@ -483,6 +541,9 @@ function render(){
   h += `<div class="cards">` + ORDER.map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
   if (openDrill) h += drill(openDrill);
   $("out").innerHTML = h;
+  bindOut(cheapest);
+}
+function bindOut(cheapest){
   document.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => { openDrill = openDrill === b.dataset.drill ? null : b.dataset.drill; render();
     if (openDrill) $("drill").scrollIntoView({behavior:"smooth", block:"start"}); });
   document.querySelectorAll("[data-pick]").forEach(tr => tr.onclick = () => { const [p,id] = tr.dataset.pick.split("|"); pick[p] = id === cheapest[p].s.id ? undefined : id; update(); });
@@ -536,11 +597,69 @@ function drill(p){
   </tbody></table></div></div>`;
 }
 
+// ---------- view 2: comparison table ----------
+function tableView(ranked, months){
+  const {ctx, shown, term, hours} = last, T = Calc.TERMS[term];
+  const cols = ORDER.filter(p => shown[p]), base = shown.ocvs;
+  const row = (label, f, cls = "") => `<tr class="${cls}"><th scope="row">${label}</th>${cols.map(p => `<td class="${p === "ocvs" ? "base" : ""}">${f(shown[p], p)}</td>`).join("")}</tr>`;
+  const sec = t => `<tr class="secrow"><td colspan="${cols.length + 1}">${t}</td></tr>`;
+  const stoName = (r, p) => r.plan.kind === "so" ? `${r.plan.so} × ${r.plan.soId}` : r.plan.ext ? `${esc(ctx[p].storage.name)} · ${esc(ctx[p].storage.tier)}` : "None (vSAN only)";
+  const save = (r, p, mult) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * mult;
+    return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
+  const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
+  let h = `<section class="t2"><div class="t2head"><h2>Comparison</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>
+  <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
+  ${sec("Configuration")}
+  ${row("Region", (r, p) => esc(ctx[p].region))}
+  ${row("Node / shape", r => `<b>${esc(r.s.label)}</b>`)}
+  ${row("Nodes in cluster", (r, p) => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}${r.plan.driver === "Minimum" ? ` (${P.providers[p].name} minimum)` : ""}`)}
+  ${row("Sized by", r => r.plan.driver)}
+  ${sec("Nodes needed per resource")}
+  ${row("CPU", r => `<span class="${r.plan.driver === "CPU" ? "drv" : ""}">${r.need.cpu}</span>`)}
+  ${row("RAM", r => `<span class="${r.plan.driver === "RAM" ? "drv" : ""}">${r.need.ram}</span>`)}
+  ${row("Storage (vSAN only)", r => r.need.sto == null ? "no local vSAN" : `<span class="${r.plan.driver === "Storage" ? "drv" : ""}">${r.need.sto}</span>`)}
+  ${row("HA spare / minimum", r => `+${r.need.ha} / ${r.need.min}`)}
+  ${sec("Hardware")}
+  ${row("Physical cores per node", r => r.s.cores)}
+  ${row("Memory per node", r => fmt(r.s.ram) + " GB")}
+  ${row("Local storage per node", r => r.s.raw ? r.s.raw + " TB NVMe (vSAN)" : "Block Volume")}
+  ${row("Cluster cores / RAM", r => `${fmt(r.plan.hosts * r.s.cores)} / ${fmt(r.plan.hosts * r.s.ram / 1024)} TB`)}
+  ${row("Usable vSAN", r => r.s.raw || r.plan.so ? `${r.plan.usable.toFixed(1)} TB (${r.plan.pol})` : "—")}
+  ${sec("Additional storage")}
+  ${row("Option", stoName)}
+  ${row("Capacity", r => r.plan.kind === "so" ? `${(r.plan.so * r.plan.soRaw).toFixed(1)} TB raw` : r.plan.ext ? r.plan.ext.toFixed(1) + " TB" : "—")}
+  ${sec(`${T.short} pricing`)}
+  ${row("Rate / node / hour", r => "$" + r.rate.toFixed(2))}
+  ${row("Per node / month", r => money(r.rate * hours))}
+  ${row("Per physical core / month", r => "$" + (r.rate * hours / r.s.cores).toFixed(2))}
+  ${row("Hosts / month", r => money(r.plan.nodeCost))}
+  ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
+  ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
+  ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
+  ${base ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}
+  </tbody></table></div>`;
+  if (base) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+    return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
+      : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
+  h += `<div class="shapebar"><span>Compare every shape:</span>${ORDER.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div></section>`;
+  if (openDrill) h += drill(openDrill);
+  return h;
+}
+function setView(v){
+  view = v; document.body.classList.toggle("v2", v === 2);
+  document.querySelectorAll("[data-view]").forEach(a => a.setAttribute("aria-current", +a.dataset.view === v ? "page" : "false"));
+  try { history.replaceState(null, "", v === 2 ? "?view=2" : location.pathname); } catch (e) {}
+  if (last) render();
+}
+let view = new URLSearchParams(location.search).get("view") === "2" ? 2 : 1;
+document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preventDefault(); setView(+a.dataset.view); });
+
 // ---------- init ----------
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
 buildProvSel();
 [...PKEYS, ...AKEYS, "mCpu", "mRam", "mSto"].forEach(k => $(k).addEventListener("input", update));
 $("sources").innerHTML = `Host prices: <a href="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/">VMware Cloud Pricing Compare</a> (as of ${P.asOf}). Storage prices: <a href="https://lvaibhavt.github.io/ocvs-external-storage-pricing/">OCVS External Storage Pricing</a> (as of ${S.asOf}). Public list prices, BYOL. Excludes VCF licences, networking, egress, backup, support and taxes. External storage is pay-as-you-go. Indicative only, not a quote.`;
+setView(view);
 update();
 </script>
 </body>
