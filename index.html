@@ -273,7 +273,7 @@ function buildProvSel(){
     const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
     return `<div class="pbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
       <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div>
-      <div class="field" id="f_st_${p}"><label>External storage</label><select id="st_${p}"></select></div></div>`;
+      <div class="field" id="f_st_${p}"><label>External storage</label><select id="st_${p}"></select></div>${p === "gcve" ? `<p style="font-size:12px;color:var(--muted);margin:6px 0 0">Storage-only vSAN nodes are also compared for ve2 shapes, same term as the hosts.</p>` : ""}</div>`;
   }).join("");
   ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; fillStorage(p); });
 }
@@ -368,7 +368,35 @@ function size(s,req,a){
   const deficit = Math.max(0, req.sto - hosts*u.per);
   if (deficit > 0) plans.push({kind:"ext", hosts, usable:hosts*u.per, pol:u.pol, ext:deficit/(1-a.slack),
     driver: hosts > compute ? "Minimum" : (cpuN >= ramN ? "CPU" : "RAM")});
+  // GCVE: extra vSAN capacity from storage-only nodes of the same ve2 size class,
+  // at most 50% of the cluster (so never more storage-only nodes than HCI nodes)
+  const so = soNodeFor(s);
+  if (so && deficit > 0) {
+    for (let h = hosts; h < hosts + 200; h++) {
+      let n = 0;
+      const fits = n => { const pol = h + n >= POL[a.pol].min ? POL[a.pol] : POL.r1;
+        return {ok:(h*s.raw + n*so.rawTB)*(1-a.slack)/pol.f*a.dedup >= req.sto, pol}; };
+      while (!fits(n).ok && n <= h) n++;
+      if (n <= h) {
+        const pol = fits(n).pol;
+        plans.push({kind:"so", hosts:h, so:n, soId:so.id, soRaw:so.rawTB, pol:pol.l, ext:0,
+          usable:(h*s.raw + n*so.rawTB)*(1-a.slack)/pol.f*a.dedup,
+          driver: h > Math.max(compute, s.min) ? "Storage" : hosts > compute ? "Minimum" : (cpuN >= ramN ? "CPU" : "RAM")});
+        break;
+      }
+    }
+  }
   return {need, plans};
+}
+const SO_TIERS = (S.options.find(o => o.id === "gcve-so") || {tiers:[]}).tiers;
+function soNodeFor(s){
+  const m = s.p === "gcve" && /^ve2-([a-z]+)-/.exec(s.id);
+  return m ? SO_TIERS.find(t => t.id === `ve2-${m[1]}-so`) : null;
+}
+function soRate(region, soId, term){
+  const reg = (SR.platforms.gcve || []).find(r => r.id === region);
+  const arr = reg && (reg.avail["gcve-so"] || {})[soId];
+  return arr ? arr[{od:0,"1yr":1,"3yr":2}[term]] : undefined;
 }
 function priceShape(s,req,a,ctx){
   const pc = ctx[s.p], rate = (pc.rates[s.id] || {})[ctx.term];
@@ -378,7 +406,11 @@ function priceShape(s,req,a,ctx){
   for (const pl of plans) {
     if (pl.kind === "ext" && !pc.storage) continue;
     pl.nodeCost = pl.hosts*rate*ctx.hours;
-    pl.stoCost = storageCost(pc.storage, pl.ext, ctx.hours);
+    if (pl.kind === "so") {
+      const r = soRate(pc.region, pl.soId, ctx.term);
+      if (typeof r !== "number") continue;
+      pl.soEach = r*ctx.hours; pl.stoCost = pl.so*pl.soEach;
+    } else pl.stoCost = storageCost(pc.storage, pl.ext, ctx.hours);
     pl.total = pl.nodeCost + pl.stoCost;
     if (!best || pl.total < best.total) best = pl;
   }
@@ -436,7 +468,7 @@ function render(){
    <div class="winner" style="--wc:${COLOR[w]}"><div>
      <div class="t">Lowest cost</div>
      <div class="h">${P.providers[w].longName}</div>
-     <div class="s">${wr.plan.hosts} × ${esc(wr.s.label)}${wr.plan.ext ? ` + ${wr.plan.ext.toFixed(0)} TB ${esc(ctx[w].storage.name)}` : ""}${second ? ` · <b class="down">${Math.round((1-wr.plan.total/second.plan.total)*100)}% less</b> than ${P.providers[ranked[1]].name}` : ""}</div>
+     <div class="s">${wr.plan.hosts} × ${esc(wr.s.label)}${wr.plan.kind === "so" ? ` + ${wr.plan.so} × ${wr.plan.soId} storage-only` : wr.plan.ext ? ` + ${wr.plan.ext.toFixed(0)} TB ${esc(ctx[w].storage.name)}` : ""}${second ? ` · <b class="down">${Math.round((1-wr.plan.total/second.plan.total)*100)}% less</b> than ${P.providers[ranked[1]].name}` : ""}</div>
    </div><div class="big num">${money(wr.plan.total)}<small>per month · ${kmoney(wr.plan.total*months)} over ${months} months</small></div></div>
    <div class="panel" style="margin-top:16px;padding:18px 20px"><div class="bars">${ranked.map(p => `<div class="bar"><span><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}</span>
      <div class="tr"><div class="fl" style="width:${shown[p].plan.total/max*100}%;background:${COLOR[p]}"></div></div><span class="val num">${money(shown[p].plan.total)}/mo</span></div>`).join("")}</div></div>`;
@@ -458,9 +490,10 @@ function needBars(r){
   let calc = `max(CPU ${n.cpu}, RAM ${n.ram})${n.ha?` + ${n.ha} HA`:""} = <b>${n.compute}</b>`;
   if (pl.kind === "vsan" && n.sto > n.compute) calc += ` · storage needs <b>${n.sto}</b>`;
   if (n.min > Math.max(n.compute, pl.kind === "vsan" ? n.sto||0 : 0)) calc += ` · minimum <b>${n.min}</b>`;
-  calc += ` → <b>${pl.hosts} hosts</b>`;
+  if (pl.kind === "so") calc += `${pl.hosts > Math.max(n.compute, n.min) ? ` · raised to <b>${pl.hosts}</b> HCI (storage-only ≤ 50%)` : ""} → <b>${pl.hosts} HCI + ${pl.so} storage-only</b>`;
+  else calc += ` → <b>${pl.hosts} hosts</b>`;
   return `<h4>Nodes needed per resource</h4>${row("CPU", n.cpu, drv==="CPU")}${row("RAM", n.ram, drv==="RAM")}${row("Storage", stoLbl, drv==="Storage")}
-    <div class="calc">${calc}${pl.kind === "ext" && n.sto != null ? `<br>Storage on vSAN alone would need ${n.sto} nodes. External storage is cheaper.` : ""}${n.sto == null ? "<br>No local vSAN: all storage is external." : ""}</div>`;
+    <div class="calc">${calc}${pl.kind === "ext" && n.sto != null ? `<br>Storage on vSAN alone would need ${n.sto} nodes. External storage is cheaper.` : ""}${pl.kind === "so" ? `<br>Storage on HCI nodes alone would need ${n.sto}. Storage-only nodes are cheaper.` : ""}${n.sto == null ? "<br>No local vSAN: all storage is external." : ""}</div>`;
 }
 
 function card(p, rank, r, cheap, ocvs, months){
@@ -475,6 +508,7 @@ function card(p, rank, r, cheap, ocvs, months){
      <div class="price num">${money(pl.total)}<small>/mo</small></div>${delta}
      <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(last.ctx[p].region)}`}</div></div>
    <div class="need">${needBars(r)}</div>
+   ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
    ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}</div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
    <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
@@ -490,7 +524,7 @@ function drill(p){
     return `<tr data-pick="${p}|${esc(r.s.id)}" class="${r===sel?"sel":""}"><td><b>${esc(r.s.label)}</b>${r===cheap?`<span class="tag">Cheapest</span>`:""}${r===sel&&r!==cheap?`<span class="tag o">Selected</span>`:""}</td>
     <td class="num" style="color:var(--muted)">${r.s.cores}c · ${fmt(r.s.ram)} GB · ${r.s.raw?r.s.raw+" TB":"no vSAN"}</td>
     ${cell(n.cpu, d==="CPU")}${cell(n.ram, d==="RAM")}${cell(n.sto, d==="Storage")}<td class="num">+${n.ha} / ${n.min}${d==="Minimum"?" ◂":""}</td>
-    <td class="num"><b>${pl.hosts}</b></td><td>${pl.kind==="vsan"?"vSAN":`+ ${pl.ext.toFixed(0)} TB ext.`}</td>
+    <td class="num"><b>${pl.hosts}</b></td><td>${pl.kind==="vsan"?"vSAN":pl.kind==="so"?`+ ${pl.so} storage-only`:`+ ${pl.ext.toFixed(0)} TB ext.`}</td>
     ${r.na ? `<td class="na" colspan="3">${r.na}</td>` : `<td class="num">${money(pl.nodeCost)}</td><td class="num">${pl.stoCost?money(pl.stoCost):"–"}</td><td class="num"><b>${money(pl.total)}</b></td>`}</tr>`; }).join("")}
   </tbody></table></div></div>`;
 }
