@@ -692,7 +692,7 @@ function render(){
 function bindOut(cheapest){
   document.querySelectorAll("[data-ppt]").forEach(b => b.onclick = async () => {
     b.disabled = true; const t = b.textContent; b.textContent = "Building…";
-    try { await Deck.download(deckModel()); } catch (e) { alert(e.message); }
+    try { if (view === 2) await Deck.download(deckModel()); else await Deck.downloadCards(cardsModel()); } catch (e) { alert(e.message); }
     b.disabled = false; b.textContent = t; });
   document.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => { openDrill = openDrill === b.dataset.drill ? null : b.dataset.drill; render();
     if (openDrill) $("drill").scrollIntoView({behavior:"smooth", block:"start"}); });
@@ -747,6 +747,41 @@ function drill(p){
 }
 
 // ---------- PowerPoint model ----------
+// View 1 slide: winner, cost bars and one card per cloud (same content as the cards on screen)
+const HEX = {ocvs:"C74634", avs:"0078D4", gcve:"188038", evs:"E88A00"};
+function cardsModel(){
+  const {ctx, shown, term, hours} = last, T = Calc.TERMS[term], months = T.months, base = deckModel();
+  const ranked = ORDER.filter(p => shown[p]).sort((x,y) => shown[x].plan.total - shown[y].plan.total);
+  const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null, ocvs = shown.ocvs;
+  const stoLine = (r, p) => { const pl = r.plan, st = ctx[p].storage;
+    if (pl.kind === "so") return `+ ${pl.so} × ${pl.soId} storage-only nodes (${pl.soRaw} TB raw each) = ${money(pl.stoCost)}/mo`;
+    if (!pl.ext) return "";
+    const mn = minNote(st, pl.ext);
+    return `+ ${pl.ext.toFixed(1)} TB ${st.name} · ${st.tier} = ${money(pl.stoCost)}/mo${st.opt.id.startsWith("fsx") ? " (throughput not included)" : ""}${mn ? "\n⚠ " + mn : ""}`; };
+  const calcLine = r => { const n = r.need, pl = r.plan;
+    let c = `max(CPU ${n.cpu}, RAM ${n.ram})${n.ha ? ` + ${n.ha} HA` : ""} = ${n.compute}`;
+    if (pl.kind === "vsan" && n.sto > n.compute) c += ` · storage needs ${n.sto}`;
+    if (n.min > Math.max(n.compute, pl.kind === "vsan" ? n.sto || 0 : 0)) c += ` · minimum ${n.min}`;
+    return c + (pl.kind === "so" ? ` → ${pl.hosts} + ${pl.so} storage-only` : ` → ${pl.hosts} hosts`); };
+  return {
+    ...base,
+    winner: {color: HEX[w], name: P.providers[w].longName,
+      desc: `${wr.plan.hosts} × ${wr.s.label}${wr.plan.kind === "so" ? ` + ${wr.plan.so} × ${wr.plan.soId} storage-only` : wr.plan.ext ? ` + ${wr.plan.ext.toFixed(0)} TB ${ctx[w].storage.name}` : ""}${second ? ` · ${Math.round((1 - wr.plan.total / second.plan.total) * 100)}% less than ${P.providers[ranked[1]].name}` : ""}`,
+      price: money(wr.plan.total), sub: `per month · ${kmoney(wr.plan.total * months)} over ${months} months`},
+    bars: ranked.map(p => ({name: P.providers[p].name, color: HEX[p], value: shown[p].plan.total, label: money(shown[p].plan.total) + "/mo"})),
+    cards: ORDER.filter(p => shown[p]).map(p => { const r = shown[p], pl = r.plan, d = ocvs ? pl.total - ocvs.plan.total : 0;
+      return {color: HEX[p], name: P.providers[p].longName, rank: ranked.indexOf(p) + 1, price: money(pl.total),
+        delta: p === "ocvs" ? "Baseline" : `${d > 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d > 0 ? "+" : "−"}${Math.abs(Math.round(d / ocvs.plan.total * 100))}%) vs OCVS`,
+        deltaColor: p === "ocvs" ? "667080" : d > 0 ? "C2410C" : "15803D",
+        shape: `${pl.hosts} × ${r.s.label}`, sub: `${pl.driver}-driven · ${regionName(p, ctx[p].region)}`,
+        need: [{l:"CPU", v:r.need.cpu, d:pl.driver === "CPU"}, {l:"RAM", v:r.need.ram, d:pl.driver === "RAM"}, {l:"Storage", v:r.need.sto, d:pl.driver === "Storage"}],
+        calc: calcLine(r), storage: stoLine(r, p), minWarn: !!(pl.ext && minNote(ctx[p].storage, pl.ext)),
+        specs: [["Cores", fmt(pl.hosts * r.s.cores)], ["RAM", fmt(pl.hosts * r.s.ram / 1024) + " TB"], ["vSAN usable", r.s.raw ? pl.usable.toFixed(0) + " TB" : "–"]],
+        costs: [["Hosts", money(pl.nodeCost)], ["Storage", pl.stoCost ? money(pl.stoCost) : "–"], [`${months} months`, kmoney(pl.total * months)]]}; }),
+    fileName: base.fileName.replace("OCVS_Sizing_", "OCVS_Sizing_Cards_")
+  };
+}
+
 function deckModel(){
   const {ctx, shown, term, hours, req} = last, T = Calc.TERMS[term], months = T.months;
   const cols = ORDER.filter(p => shown[p]), base = shown.ocvs;

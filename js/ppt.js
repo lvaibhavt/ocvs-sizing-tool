@@ -123,5 +123,88 @@
     await build(rep).writeFile({ fileName: rep.fileName });
   }
 
-  root.Deck = { build, download };
+  // ---------- View 1 (cards) layout ----------
+  const K = { dark: "1D1F27", text: "15181D", muted: "667080", line: "E3E6EB", soft: "F3F4F7", good: "15803D", bad: "C2410C", warn: "B45309" };
+  const F = "Segoe UI";
+
+  function slideCards(pptx, m) {
+    const s = pptx.addSlide();
+    s.background = { color: "FFFFFF" };
+    banner(pptx, s);
+    const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
+    // header band
+    s.addShape(pptx.ShapeType.rect, { x: 0, y: 0.34, w: W, h: 1.25, fill: { color: K.dark }, line: { color: K.dark } });
+    T("Which cloud runs this VMware estate for less?", { x: M, y: 0.46, w: W - 2 * M, h: 0.6, fontSize: 28, bold: true, color: "FFFFFF" });
+    T(m.subtitle, { x: M, y: 1.08, w: W - 2 * M, h: 0.35, fontSize: 12.5, color: "C9CDD6" });
+
+    // winner
+    const wy = 1.78, wh = 1.05, w = m.winner;
+    s.addShape(pptx.ShapeType.roundRect, { x: M, y: wy, w: W - 2 * M, h: wh, rectRadius: 0.1, fill: { color: "FFFFFF" }, line: { color: K.line, width: 1 } });
+    s.addShape(pptx.ShapeType.rect, { x: M, y: wy, w: 0.1, h: wh, fill: { color: w.color }, line: { color: w.color } });
+    T([{ text: "LOWEST COST", options: { fontSize: 11, bold: true, color: K.muted, charSpacing: 2, breakLine: true } },
+       { text: w.name, options: { fontSize: 22, bold: true, color: K.text, breakLine: true } },
+       { text: w.desc, options: { fontSize: 12.5, color: K.muted } }], { x: M + 0.35, y: wy + 0.08, w: 9.5, h: wh - 0.16, valign: "middle" });
+    T([{ text: w.price, options: { fontSize: 30, bold: true, color: K.text, breakLine: true } },
+       { text: w.sub, options: { fontSize: 11.5, color: K.muted } }], { x: W - M - 5.2, y: wy + 0.08, w: 4.95, h: wh - 0.16, align: "right", valign: "middle" });
+
+    // bars
+    const by = 3.0, max = Math.max(...m.bars.map(b => b.value));
+    m.bars.forEach((b, i) => {
+      const y = by + i * 0.3, x0 = M + 1.9, bw = W - 2 * M - 1.9 - 1.9;
+      T(b.name, { x: M, y, w: 1.8, h: 0.24, fontSize: 11.5, color: K.text, valign: "middle" });
+      s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: bw, h: 0.15, rectRadius: 0.07, fill: { color: K.soft }, line: { color: K.soft } });
+      s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: Math.max(0.05, bw * b.value / max), h: 0.15, rectRadius: 0.07, fill: { color: b.color }, line: { color: b.color } });
+      T(b.label, { x: W - M - 1.8, y, w: 1.8, h: 0.24, fontSize: 11.5, bold: true, color: K.text, align: "right", valign: "middle" });
+    });
+
+    // cards
+    const cy = by + m.bars.length * 0.3 + 0.2, ch = H - cy - 0.35, gap = 0.22, n = m.cards.length;
+    const cw = (W - 2 * M - gap * (n - 1)) / n;
+    m.cards.forEach((c, i) => {
+      const x = M + i * (cw + gap), px = x + 0.18, iw = cw - 0.36;
+      s.addShape(pptx.ShapeType.roundRect, { x, y: cy, w: cw, h: ch, rectRadius: 0.08, fill: { color: "FFFFFF" }, line: { color: K.line, width: 1 } });
+      s.addShape(pptx.ShapeType.rect, { x: x + 0.05, y: cy, w: cw - 0.1, h: 0.07, fill: { color: c.color }, line: { color: c.color } });
+      T(c.name, { x: px, y: cy + 0.15, w: iw - 0.55, h: 0.3, fontSize: 11.5, bold: true, color: K.text, fit: "shrink" });
+      s.addShape(pptx.ShapeType.roundRect, { x: x + cw - 0.68, y: cy + 0.16, w: 0.5, h: 0.26, rectRadius: 0.13, fill: { color: c.rank === 1 ? K.good : K.soft }, line: { color: c.rank === 1 ? K.good : K.soft } });
+      T("#" + c.rank, { x: x + cw - 0.68, y: cy + 0.16, w: 0.5, h: 0.26, fontSize: 10.5, bold: true, color: c.rank === 1 ? "FFFFFF" : K.muted, align: "center", valign: "middle" });
+      T([{ text: c.price, options: { fontSize: 22, bold: true, color: K.text } }, { text: " /mo", options: { fontSize: 11, color: K.muted } }], { x: px, y: cy + 0.5, w: iw, h: 0.42 });
+      T(c.delta, { x: px, y: cy + 0.92, w: iw, h: 0.24, fontSize: 10.5, bold: true, color: c.deltaColor });
+      s.addShape(pptx.ShapeType.roundRect, { x: px, y: cy + 1.2, w: iw, h: 0.55, rectRadius: 0.06, fill: { color: K.soft }, line: { color: K.soft } });
+      T([{ text: c.shape, options: { fontSize: 12, bold: true, color: K.text, breakLine: true } }, { text: c.sub, options: { fontSize: 9.5, color: K.muted } }], { x: px + 0.1, y: cy + 1.22, w: iw - 0.2, h: 0.51, valign: "middle", fit: "shrink" });
+      T("NODES NEEDED PER RESOURCE", { x: px, y: cy + 1.85, w: iw, h: 0.2, fontSize: 8.5, bold: true, color: K.muted, charSpacing: 1 });
+      const top = Math.max(1, ...c.need.map(r => r.v || 0));
+      c.need.forEach((r, j) => {
+        const y = cy + 2.1 + j * 0.27, bx = px + 0.75, bw = iw - 0.75 - 0.75;
+        T(r.l, { x: px, y, w: 0.7, h: 0.22, fontSize: 10, bold: r.d, color: K.text, valign: "middle" });
+        s.addShape(pptx.ShapeType.roundRect, { x: bx, y: y + 0.07, w: bw, h: 0.09, rectRadius: 0.04, fill: { color: K.soft }, line: { color: K.soft } });
+        if (r.v) s.addShape(pptx.ShapeType.roundRect, { x: bx, y: y + 0.07, w: Math.max(0.04, bw * r.v / top), h: 0.09, rectRadius: 0.04, fill: { color: r.d ? c.color : "C4C9D2" }, line: { color: r.d ? c.color : "C4C9D2" } });
+        T(r.v == null ? "–" : `${r.v} node${r.v === 1 ? "" : "s"}`, { x: px + iw - 0.72, y, w: 0.72, h: 0.22, fontSize: 10, bold: r.d, color: K.text, align: "right", valign: "middle" });
+      });
+      T(c.calc, { x: px, y: cy + 2.95, w: iw, h: 0.26, fontSize: 9, color: K.muted, fit: "shrink" });
+      if (c.storage) T(c.storage, { x: px, y: cy + 3.22, w: iw, h: 0.5, fontSize: 9, color: c.minWarn ? K.warn : K.text, fit: "shrink", valign: "top" });
+      // specs and costs
+      const sy = cy + ch - 0.95, third = iw / 3;
+      s.addShape(pptx.ShapeType.line, { x: px, y: sy - 0.06, w: iw, h: 0, line: { color: K.line, width: 0.75 } });
+      [c.specs, c.costs].forEach((row, k) => row.forEach(([l, v], j) =>
+        T([{ text: l, options: { fontSize: 8.5, color: K.muted, breakLine: true } }, { text: v, options: { fontSize: 11, bold: true, color: K.text } }],
+          { x: px + j * third, y: sy + k * 0.46, w: third, h: 0.42, fit: "shrink" })));
+    });
+  }
+
+  function buildCards(m) {
+    if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load (check your internet connection).");
+    const pptx = new window.PptxGenJS();
+    pptx.defineLayout({ name: "DECK", width: W, height: H });
+    pptx.layout = "DECK";
+    pptx.title = "OCVS Sizing & Pricing";
+    slideCards(pptx, m);
+    slideSources(pptx, m);
+    return pptx;
+  }
+
+  async function downloadCards(m) {
+    await buildCards(m).writeFile({ fileName: m.fileName });
+  }
+
+  root.Deck = { build, download, buildCards, downloadCards };
 })(this);
