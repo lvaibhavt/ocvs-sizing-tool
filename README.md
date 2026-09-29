@@ -19,6 +19,21 @@ Prices come live from two companion tools, so updating them there updates this t
 - Host prices: [VMware Cloud Pricing Compare](https://lvaibhavt.github.io/vmware-cloud-pricing-compare/) (`data/pricing.js`, `data/regional-prices.js`)
 - External storage prices: [OCVS External Storage Pricing](https://lvaibhavt.github.io/ocvs-external-storage-pricing/) (`data/storage.js`, `data/regions.js`)
 
+## Simple by default, advanced when you need it
+
+Out of the box the tool uses the basics: **3-year commitment with monthly payments, 744 hours per month, Frankfurt**, and the **cheapest additional storage** on each cloud that suits running VMs, used only when it costs less than adding vSAN hosts:
+
+| Cloud | Default additional storage (Frankfurt) |
+|---|---|
+| OCVS | OCI Block Volume · Balanced (10 VPU) |
+| AVS | Azure Elastic SAN · Premium LRS |
+| GCVE | Cheapest of Google Cloud NetApp Volumes Standard and storage-only vSAN nodes |
+| Amazon EVS | FSx for NetApp ONTAP · Single-AZ SSD |
+
+Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, and the storage option per cloud (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
+
+**Download PPT** (both views) builds a comparison slide and an assumptions & sources slide in the same style as VMware Cloud Pricing Compare.
+
 ## How to use it
 
 1. Choose one input method:
