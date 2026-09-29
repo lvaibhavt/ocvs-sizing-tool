@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VMware Cloud Sizer</title>
+<meta name="description" content="Shape-based sizing for Oracle Cloud VMware Solution, Azure VMware Solution, Google Cloud VMware Engine and Amazon Elastic VMware Service.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#5d6670;--line:#dde1e6;
+  --accent:#c74634;--accent-soft:#fbeae7;--ok:#1f7a4d;--warn:#9a6700;--chip:#eef1f4;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111418;--card:#1a1e24;--text:#e6e9ed;--muted:#9aa4ae;--line:#2c323a;
+  --accent:#ef6f5c;--accent-soft:#3a201c;--ok:#4cc38a;--warn:#e3b341;--chip:#252b33;}}
+:root[data-theme="dark"]{
+  --bg:#111418;--card:#1a1e24;--text:#e6e9ed;--muted:#9aa4ae;--line:#2c323a;
+  --accent:#ef6f5c;--accent-soft:#3a201c;--ok:#4cc38a;--warn:#e3b341;--chip:#252b33;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:16px;margin:0}
+p.sub{color:var(--muted);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tab{flex:1;min-width:220px;border:2px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:14px;text-align:left;cursor:pointer;font:inherit}
+.tab b{display:block;font-size:15px}
+.tab span{color:var(--muted);font-size:13px}
+.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.hover{border-color:var(--accent)}
+button.go{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:11px 22px;font:inherit;font-weight:600;cursor:pointer}
+details summary{cursor:pointer;font-weight:600}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.stat{background:var(--chip);border-radius:8px;padding:8px 12px;font-size:13px}
+.stat b{font-size:16px;display:block}
+.prov{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.pc{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--card)}
+.pc .shape{font-size:20px;font-weight:700;margin:6px 0 2px}
+.pc .nodes{font-size:14px;color:var(--muted)}
+.pc dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:12px 0 0;font-size:13px}
+.pc dt{color:var(--muted)} .pc dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
+.badge.drv{background:var(--accent-soft);color:var(--accent)}
+.ext{margin-top:12px;padding:10px;border-radius:8px;background:var(--chip);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tr.best td{font-weight:600}
+.tbl{overflow-x:auto}
+.note{font-size:12px;color:var(--muted)}
+.warn{color:var(--warn)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>VMware Cloud Sizer</h1>
+  <p class="sub">Find the right host shape and node count on Oracle Cloud VMware Solution, Azure VMware Solution, Google Cloud VMware Engine and Amazon Elastic VMware Service. This tool sizes by shape only and doesn't compare prices.</p>
+
+  <div class="card">
+    <h2>1. Your workload</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tRv" aria-selected="true"><b>I have an RVTools report</b><span>Upload the .xlsx export and we'll read the vInfo sheet</span></button>
+      <button class="tab" role="tab" id="tMan" aria-selected="false"><b>Enter numbers manually</b><span>Total vCPU, RAM and storage</span></button>
+    </div>
+
+    <div id="pRv">
+      <div class="drop" id="drop">Drop an RVTools .xlsx file here or <u>click to browse</u><input type="file" id="file" accept=".xlsx,.xls" hidden></div>
+      <div class="grid" style="margin-top:14px">
+        <div><label>VMs to include</label><select id="rvPower"><option value="on">Powered-on only</option><option value="all">All VMs (excluding templates)</option></select></div>
+        <div><label>Storage basis</label><select id="rvStor"><option value="inuse">In Use (consumed)</option><option value="prov">Provisioned</option></select></div>
+      </div>
+      <div id="rvInfo" class="stats"></div>
+      <p class="note">Your file is read in your browser and isn't uploaded anywhere.</p>
+    </div>
+
+    <div id="pMan" class="hidden">
+      <div class="grid">
+        <div><label>Total vCPU</label><input type="number" id="mCpu" value="800" min="0"></div>
+        <div><label>Total RAM (GB)</label><input type="number" id="mRam" value="4096" min="0"></div>
+        <div><label>Total storage (TB, used)</label><input type="number" id="mSto" value="60" min="0" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>2. Sizing assumptions (optional)</summary>
+      <div class="grid" style="margin-top:14px">
+        <div><label>vCPU : physical core ratio</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
+        <div><label>RAM overcommit (1 = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
+        <div><label>Growth buffer %</label><input type="number" id="aGrowth" value="20" min="0"></div>
+        <div><label>Host RAM reserved for ESXi/vSAN %</label><input type="number" id="aRamRes" value="10" min="0" max="50"></div>
+        <div><label>HA spare host</label><select id="aHa"><option value="1">N+1</option><option value="2">N+2</option><option value="0">None</option></select></div>
+        <div><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33x), needs 4 or more hosts</option><option value="r1">RAID-1 FTT=1 (2x)</option><option value="r6">RAID-6 FTT=2 (1.5x), needs 6 or more hosts</option></select></div>
+        <div><label>vSAN slack space %</label><input type="number" id="aSlack" value="25" min="0" max="50"></div>
+        <div><label>Dedup/compression ratio</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
+      </div>
+      <p class="note">If a cluster is too small for the chosen policy, the tool falls back to RAID-1. HA spare hosts count toward compute capacity only.</p>
+    </details>
+  </div>
+
+  <p><button class="go" id="run">Size it</button></p>
+
+  <div id="out" class="hidden">
+    <div class="card">
+      <h2>Requirement after growth and assumptions</h2>
+      <div class="stats" id="reqStats"></div>
+    </div>
+    <h2>Recommended shape per cloud</h2>
+    <p class="note">The recommendation is the shape that meets the requirement with the fewest physical cores. Core count is a proxy for cost, because VCF licensing and host pricing both scale with cores. Ties go to the fewest hosts.</p>
+    <div class="prov" id="recs"></div>
+    <div class="card" style="margin-top:20px">
+      <h2>All shapes compared</h2>
+      <div class="tbl"><table id="all"></table></div>
+    </div>
+  </div>
+
+  <p class="note">Host specs are public figures as of 2026. Some are marked "verify": confirm these with the provider before you quote them. Raw storage means the vSAN capacity tier before any policy is applied.</p>
+</div>
+
+<script>
+// cores = physical cores per host, ram = GB, raw = TB of vSAN capacity (0 = no local vSAN, external storage only)
+const SHAPES = [
+  {p:"OCVS",n:"BM.DenseIO.E5.128 (32 cores)",cores:32,ram:1536,raw:81.6,min:3},
+  {p:"OCVS",n:"BM.DenseIO.E5.128 (64 cores)",cores:64,ram:1536,raw:81.6,min:3},
+  {p:"OCVS",n:"BM.DenseIO.E5.128 (128 cores)",cores:128,ram:1536,raw:81.6,min:3},
+  {p:"OCVS",n:"BM.DenseIO.E4.128 (32 cores)",cores:32,ram:2048,raw:54.4,min:3},
+  {p:"OCVS",n:"BM.DenseIO.E4.128 (64 cores)",cores:64,ram:2048,raw:54.4,min:3},
+  {p:"OCVS",n:"BM.DenseIO.E4.128 (128 cores)",cores:128,ram:2048,raw:54.4,min:3},
+  {p:"OCVS",n:"BM.DenseIO2.52",cores:52,ram:768,raw:51.2,min:3,note:"legacy"},
+  {p:"OCVS",n:"BM.Standard.E4.128 (64 cores)",cores:64,ram:2048,raw:0,min:3,note:"Block Volume only"},
+  {p:"OCVS",n:"BM.Standard.E4.128 (128 cores)",cores:128,ram:2048,raw:0,min:3,note:"Block Volume only"},
+  {p:"OCVS",n:"BM.Standard3.64",cores:64,ram:1024,raw:0,min:3,note:"Block Volume only"},
+  {p:"AVS",n:"AV36",cores:36,ram:576,raw:15.36,min:3},
+  {p:"AVS",n:"AV36P",cores:36,ram:768,raw:19.2,min:3},
+  {p:"AVS",n:"AV48",cores:48,ram:1024,raw:25.6,min:3,note:"verify"},
+  {p:"AVS",n:"AV52",cores:52,ram:1536,raw:38.4,min:3},
+  {p:"AVS",n:"AV64",cores:64,ram:1024,raw:21.12,min:3,note:"Gen1: must extend an AV36/36P/52 cluster"},
+  {p:"GCVE",n:"ve1-standard-72",cores:36,ram:768,raw:19.2,min:3},
+  {p:"GCVE",n:"ve2-standard-128",cores:64,ram:1024,raw:25.6,min:3,note:"verify"},
+  {p:"GCVE",n:"ve2-mega-384",cores:96,ram:3072,raw:51.2,min:3,note:"verify"},
+  {p:"EVS",n:"i4i.metal",cores:64,ram:1024,raw:30,min:4}
+];
+const PROV = {
+  OCVS:{name:"Oracle Cloud VMware Solution",ext:"OCI Block Volume (VMFS datastore)"},
+  AVS:{name:"Azure VMware Solution",ext:"Azure NetApp Files / Azure Elastic SAN"},
+  GCVE:{name:"Google Cloud VMware Engine",ext:"Google Cloud NetApp Volumes / Filestore"},
+  EVS:{name:"Amazon Elastic VMware Service",ext:"Amazon FSx for NetApp ONTAP"}
+};
+const POL = {r1:{f:2,min:3,l:"RAID-1"},r5:{f:4/3,min:4,l:"RAID-5"},r6:{f:1.5,min:6,l:"RAID-6"}};
+const $ = id => document.getElementById(id);
+let mode = "rv", rv = null;
+
+function setMode(m){mode=m;$("tRv").setAttribute("aria-selected",m==="rv");$("tMan").setAttribute("aria-selected",m==="man");
+  $("pRv").classList.toggle("hidden",m!=="rv");$("pMan").classList.toggle("hidden",m!=="man");}
+$("tRv").onclick=()=>setMode("rv");$("tMan").onclick=()=>setMode("man");
+
+// ---------- RVTools parsing ----------
+const drop=$("drop");
+drop.onclick=()=>$("file").click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("hover")};
+drop.ondragleave=()=>drop.classList.remove("hover");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("hover");if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
+$("file").onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
+$("rvPower").onchange=$("rvStor").onchange=()=>rv&&summariseRv();
+
+function col(row,names){for(const n of names){for(const k in row){if(k.trim().toLowerCase()===n)return row[k]}}return undefined}
+function readFile(f){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const sn=wb.SheetNames.find(s=>s.toLowerCase()==="vinfo")||wb.SheetNames.find(s=>/vinfo/i.test(s));
+      if(!sn)throw new Error("The file has no vInfo sheet. Is this an RVTools export?");
+      rv={name:f.name,rows:XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:""})};
+      summariseRv();
+    }catch(err){$("rvInfo").innerHTML=`<span class="warn">${err.message}</span>`;rv=null}
+  };
+  r.readAsArrayBuffer(f);
+}
+function summariseRv(){
+  const onlyOn=$("rvPower").value==="on",useProv=$("rvStor").value==="prov";
+  let vms=0,cpu=0,ramMiB=0,stoMiB=0;
+  for(const row of rv.rows){
+    const vm=col(row,["vm"]);if(!vm)continue;
+    const tmpl=String(col(row,["template"])).toLowerCase()==="true";if(tmpl)continue;
+    const pw=String(col(row,["powerstate"])||"").toLowerCase();
+    if(onlyOn&&pw&&pw!=="poweredon")continue;
+    vms++;
+    cpu+=+col(row,["cpus"])||0;
+    ramMiB+=+col(row,["memory"])||0;
+    stoMiB+=+(useProv?col(row,["provisioned mib","provisioned mb"]):col(row,["in use mib","in use mb"]))||0;
+  }
+  rv.cpu=cpu;rv.ram=ramMiB/1024;rv.sto=stoMiB*1.048576/1e6;
+  $("rvInfo").innerHTML=`<div class="stat">File<b>${rv.name}</b></div><div class="stat">VMs<b>${vms}</b></div>
+   <div class="stat">vCPU<b>${fmt(rv.cpu)}</b></div><div class="stat">RAM<b>${fmt(rv.ram)} GB</b></div><div class="stat">Storage<b>${rv.sto.toFixed(1)} TB</b></div>`;
+}
+
+// ---------- sizing ----------
+const fmt=n=>Math.round(n).toLocaleString();
+function size(s,req,a){
+  const cpuHosts=req.cpu/(s.cores*a.ratio);
+  const ramHosts=req.ram/(s.ram*(1-a.ramRes)*a.ramOc);
+  const compute=Math.max(Math.ceil(cpuHosts),Math.ceil(ramHosts),1)+a.ha;
+  let res={s,compute,cpuHosts,ramHosts};
+  if(!s.raw){ // external storage only
+    res.hosts=Math.max(compute,s.min);res.driver=cpuHosts>=ramHosts?"CPU":"RAM";
+    if(res.hosts===s.min&&compute<s.min)res.driver="Minimum cluster";
+    res.ext=req.sto;res.extOnly=true;res.usable=0;res.pol="n/a";
+    return fin(res,req);
+  }
+  // vSAN: iterate so the policy matches the cluster size
+  let hosts=Math.max(compute,s.min),pol,usable,stoHosts;
+  for(let i=0;i<50;i++){
+    pol=hosts>=POL[a.pol].min?POL[a.pol]:POL.r1;
+    usable=s.raw*(1-a.slack)/pol.f*a.dedup;
+    stoHosts=Math.ceil(req.sto/usable);
+    const need=Math.max(compute,s.min,stoHosts);
+    if(need===hosts)break;hosts=need;
+  }
+  res.hosts=hosts;res.usable=usable;res.pol=pol.l;res.stoHosts=stoHosts;
+  res.driver=stoHosts>=hosts&&stoHosts>compute?"Storage":(hosts>compute?"Minimum cluster":(cpuHosts>=ramHosts?"CPU":"RAM"));
+  // alternative: size for compute, put the extra storage on external
+  if(res.driver==="Storage"){
+    const h=Math.max(compute,s.min),p=h>=POL[a.pol].min?POL[a.pol]:POL.r1;
+    const u=s.raw*(1-a.slack)/p.f*a.dedup;
+    res.alt={hosts:h,ext:Math.max(0,req.sto-h*u),vsan:h*u};
+  }
+  return fin(res,req);
+}
+function fin(r,req){
+  r.totCores=r.hosts*r.s.cores;r.totRam=r.hosts*r.s.ram;r.totRaw=r.hosts*r.s.raw;r.totUsable=r.hosts*r.usable;
+  return r;
+}
+function assumptions(){return{ratio:+$("aRatio").value||4,ramOc:+$("aRamOc").value||1,growth:(+$("aGrowth").value||0)/100,
+  ramRes:(+$("aRamRes").value||0)/100,ha:+$("aHa").value,pol:$("aPol").value,slack:(+$("aSlack").value||0)/100,dedup:+$("aDedup").value||1}}
+
+$("run").onclick=()=>{
+  let base;
+  if(mode==="rv"){if(!rv){alert("Upload an RVTools report first, or switch to manual entry.");return}base={cpu:rv.cpu,ram:rv.ram,sto:rv.sto}}
+  else base={cpu:+$("mCpu").value||0,ram:+$("mRam").value||0,sto:+$("mSto").value||0};
+  const a=assumptions(),g=1+a.growth;
+  const req={cpu:base.cpu*g,ram:base.ram*g,sto:base.sto*g};
+  const rpc=req.cpu?req.ram/req.cpu:0,spc=req.cpu?req.sto*1000/req.cpu:0;
+  const profile=spc>150?"Storage-heavy":rpc>8?"Memory-heavy":rpc<3?"CPU-heavy":"Balanced";
+  $("reqStats").innerHTML=`<div class="stat">vCPU<b>${fmt(req.cpu)}</b></div><div class="stat">RAM<b>${fmt(req.ram)} GB</b></div>
+   <div class="stat">Storage<b>${req.sto.toFixed(1)} TB</b></div><div class="stat">GB RAM per vCPU<b>${rpc.toFixed(1)}</b></div>
+   <div class="stat">GB storage per vCPU<b>${fmt(spc)}</b></div><div class="stat">Profile<b>${profile}</b></div>`;
+
+  const results=SHAPES.map(s=>size(s,req,a));
+  const rank=(x,y)=>x.totCores-y.totCores||x.hosts-y.hosts;
+  let cards="",rows=`<tr><th>Cloud</th><th>Shape</th><th>Hosts</th><th>Driver</th><th>Cores</th><th>RAM (GB)</th><th>Raw vSAN (TB)</th><th>Usable vSAN (TB)</th><th>External (TB)</th></tr>`;
+  for(const p in PROV){
+    const list=results.filter(r=>r.s.p===p).sort(rank);
+    const best=list[0];
+    cards+=card(p,best,req);
+    for(const r of list)rows+=`<tr class="${r===best?"best":""}"><td>${p}</td><td>${r.s.n}${r.s.note?` <span class="badge">${r.s.note}</span>`:""}</td><td>${r.hosts}</td><td>${r.driver}</td>
+      <td>${fmt(r.totCores)}</td><td>${fmt(r.totRam)}</td><td>${r.totRaw.toFixed(1)}</td><td>${r.extOnly?"–":r.totUsable.toFixed(1)}</td><td>${r.extOnly?r.ext.toFixed(1):"–"}</td></tr>`;
+  }
+  $("recs").innerHTML=cards;$("all").innerHTML=rows;
+  $("out").classList.remove("hidden");$("out").scrollIntoView({behavior:"smooth"});
+};
+function card(p,r,req){
+  const s=r.s,vcpuCap=r.totCores*+$("aRatio").value;
+  let ext="";
+  if(r.extOnly)ext=`<div class="ext">This shape has no local vSAN. Provision <b>${r.ext.toFixed(1)} TB</b> on ${PROV[p].ext}.</div>`;
+  else if(r.alt)ext=`<div class="ext"><b>Storage-driven.</b> Alternative: run <b>${r.alt.hosts} hosts</b> for compute (${r.alt.vsan.toFixed(1)} TB usable vSAN) and add <b>${r.alt.ext.toFixed(1)} TB</b> on ${PROV[p].ext}.</div>`;
+  return `<div class="pc"><span class="badge">${PROV[p].name}</span> <span class="badge drv">${r.driver}-driven</span>
+   <div class="shape">${s.n}</div><div class="nodes"><b>${r.hosts} hosts</b>${s.note?` · ${s.note}`:""}</div>
+   <dl><dt>Physical cores</dt><dd>${fmt(r.totCores)} (${fmt(vcpuCap)} vCPU at ${$("aRatio").value}:1)</dd>
+   <dt>RAM</dt><dd>${fmt(r.totRam)} GB</dd>
+   <dt>Raw vSAN</dt><dd>${r.totRaw.toFixed(1)} TB</dd>
+   <dt>Usable vSAN</dt><dd>${r.extOnly?"–":r.totUsable.toFixed(1)+" TB ("+r.pol+")"}</dd>
+   <dt>Need</dt><dd>${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB · ${req.sto.toFixed(1)} TB</dd></dl>${ext}</div>`;
+}
+</script>
+</body>
+</html>
