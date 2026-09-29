@@ -2,7 +2,8 @@
 """Fetch host and storage list prices straight from each cloud vendor and write data/prices.js.
 
 Sources (all public, no credentials needed):
-  OCVS  Oracle Cloud price list API   https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/
+  OCVS  Oracle OCVS pricing reference (hosts, table below); Oracle Cloud price list API for storage
+        https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/
   AVS   Azure Retail Prices API       https://prices.azure.com/api/retail/prices
   GCVE  Google Cloud pricing pages    https://cloud.google.com/vmware-engine/pricing
                                       https://cloud.google.com/netapp/volumes/pricing
@@ -13,6 +14,8 @@ Sources (all public, no credentials needed):
 
 Rates are USD per node-hour as [on-demand, 1-year, 3-year] (commitments = monthly payments / no upfront).
 Storage prices are per GB(GiB)-month, or per GiB-hour where the vendor bills hourly.
+
+OCVS host prices come from Oracle's OCVS pricing reference table (OCVS_REFERENCE below).
 
 Usage:  python tools/fetch_prices.py        (writes data/prices.js; takes a few minutes)
 """
@@ -48,30 +51,19 @@ def log(*a):
 
 
 # ---------------------------------------------------------------- OCVS (Oracle)
-# OCVS list prices are global. Oracle prices Dense shapes per OCPU-hour (all enabled OCPUs are billed),
-# DenseIO.E5 per 32-OCPU node unit, and Standard shapes as a Base node plus Expansion OCPUs.
-OCI_TERMS = {"od": "Hourly Commit", "1yr": "1 Year Commit", "3yr": "3 Year Commit"}
-# id -> how the node price is built
-OCVS_SHAPES = {
-    "BM.DenseIO2.52":            {"perOcpu": "BM.DenseIO2.52", "ocpus": 52},
-    "BM.DenseIO.E4.128 (32c)":   {"perOcpu": "BM.DenseIO.E4.32", "ocpus": 32},
-    "BM.DenseIO.E4.128 (64c)":   {"perOcpu": "BM.DenseIO.E4.64", "ocpus": 64},
-    "BM.DenseIO.E4.128":         {"perOcpu": "BM.DenseIO.E4.128", "ocpus": 128},
-    "BM.DenseIO.E5.128 (32c)":   {"perNode": "BM.DenseIO.E5.32", "units": 1},
-    "BM.DenseIO.E5.128 (64c)":   {"perNode": "BM.DenseIO.E5.32", "units": 2},
-    "BM.DenseIO.E5.128 (96c)":   {"perNode": "BM.DenseIO.E5.32", "units": 3},
-    "BM.DenseIO.E5.128":         {"perNode": "BM.DenseIO.E5.32", "units": 4},
-    "BM.Standard2.52 (12c)":     {"base": "BM.Standard2.12", "extra": 0},
-    "BM.Standard2.52":           {"base": "BM.Standard2.12", "extra": 40},
-    "BM.Standard3.64 (16c)":     {"base": "BM.Standard3.16", "extra": 0},
-    "BM.Standard3.64 (32c)":     {"base": "BM.Standard3.16", "extra": 16},
-    "BM.Standard3.64":           {"base": "BM.Standard3.16", "extra": 48},
-    "BM.Standard.E4.128 (32c)":  {"base": "BM.Standard.E4.32", "extra": 0},
-    "BM.Standard.E4.128 (64c)":  {"base": "BM.Standard.E4.32", "extra": 32},
-    "BM.Standard.E4.128":        {"base": "BM.Standard.E4.32", "extra": 96},
-    "BM.Standard.E5.192 (48c)":  {"base": "BM.Standard.E5.48", "extra": 0},
-    "BM.Standard.E5.192 (96c)":  {"base": "BM.Standard.E5.48", "extra": 48},
-    "BM.Standard.E5.192":        {"base": "BM.Standard.E5.48", "extra": 144},
+# OCVS host prices are NOT taken from the public price-list API: its per-OCPU "Commit" SKUs don't match
+# Oracle's OCVS pricing reference. Use the reference table below (USD per node per month at 744 hours,
+# [on-demand, 1-year, 3-year]). Update it when Oracle publishes new OCVS pricing.
+OCVS_REFERENCE = {
+    "BM.DenseIO2.52":      [4932.72, 3206.64, 2715.60],  # 35% / 45% discount
+    "BM.DenseIO.E4.128":   [7142.40, 4642.56, 3571.20],  # 35% / 50%
+    "BM.Standard3.64":     [3050.40, 2135.28, 1830.24],  # 30% / 40%
+    "BM.Standard2.52":     [2470.08, 1607.04, 1354.08],  # 35% / 45%
+    "BM.Standard.E4.128":  [4664.88, 3035.52, 2566.80],  # 35% / 45%
+    "BM.GPU.A10.4":        [5952.00, 3868.80, 3273.60],  # 35% / 45%
+    "BM.Standard.E5.192":  [7715.28, 5014.56, 3853.92],  # 35% / 50%
+    "BM.DenseIO.E5.128":   [8861.04, 5758.56, 4426.80],  # 35% / 50%
+    "BM.Optimized3.36":    [2016.24, 1814.62, 1713.80],  # 10% / 15%
 }
 
 
@@ -83,25 +75,8 @@ def fetch_ocvs():
         v = i["currencyCodeLocalizations"][0]["prices"][0]["value"]
         price[n.lower()] = (v, i["partNumber"])
 
-    def sku(name, term):
-        # Oracle names some base SKUs "Base - <shape>" and others just "<shape>"
-        for n in (name, name.replace("Base - ", "")):
-            want = f"oracle cloud vmware solution - {n} - {OCI_TERMS[term]}".lower()
-            if want in price:
-                return price[want][0]
-        raise KeyError(want)
-
-    rates, parts = {}, {}
-    for sid, spec in OCVS_SHAPES.items():
-        r = []
-        for t in ("od", "1yr", "3yr"):
-            if "perOcpu" in spec:
-                r.append(sku(spec["perOcpu"], t) * spec["ocpus"])
-            elif "perNode" in spec:
-                r.append(sku(spec["perNode"], t) * spec["units"])
-            else:
-                r.append(sku("Base - " + spec["base"], t) + spec["extra"] * sku("Expansion", t))
-        rates[sid] = [round(x, 6) for x in r]
+    # Host prices: Oracle's OCVS pricing reference (monthly per node at 744 hours), converted to hourly.
+    rates = {sid: [round(m / 744, 6) for m in months] for sid, months in OCVS_REFERENCE.items()}
     # storage (global)
     blk = price["storage - block volume - storage"][0]
     vpu = price["storage - block volume - performance units"][0]

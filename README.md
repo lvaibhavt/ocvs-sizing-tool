@@ -19,7 +19,7 @@ Prices come **directly from each vendor**, not from other tools:
 
 | Cloud | Hosts | Storage |
 |---|---|---|
-| OCVS | [Oracle Cloud price list API](https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/) (same as oracle.com/cloud/price-list) | Block Volume, File Storage (same API) |
+| OCVS | Oracle OCVS pricing reference (monthly per node at 744 hours, on-demand / 1-year / 3-year), kept in `OCVS_REFERENCE` in `tools/fetch_prices.py` | Block Volume, File Storage ([Oracle Cloud price list API](https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/)) |
 | AVS | [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) (VCF BYOL, all regions) | Elastic SAN, Azure NetApp Files (same API) |
 | GCVE | [VMware Engine pricing page](https://cloud.google.com/vmware-engine/pricing) (every region's table) | Storage-only nodes (same page), [NetApp Volumes](https://cloud.google.com/netapp/volumes/pricing), [Filestore](https://cloud.google.com/filestore/pricing) |
 | Amazon EVS | [AWS Price List](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEVS/current/region_index.json) (EVS fee) + AWS pricing-page data (EC2 on-demand, EC2 Instance Savings Plans, Dedicated Host) | FSx for NetApp ONTAP (AWS Price List) |
@@ -32,7 +32,7 @@ python tools/fetch_prices.py
 
 This rewrites `data/prices.js` (a few minutes; no credentials needed). Commit the file and the site updates. Host specs, regions and storage documentation live in `data/catalog.js`.
 
-**OCVS pricing model (from Oracle's price list):** Dense shapes are billed per OCPU-hour for every OCPU enabled on the host (e.g. BM.DenseIO.E4.128 = 128 × the per-OCPU rate); BM.DenseIO.E5 per 32-OCPU unit; Standard shapes as a Base node plus Expansion OCPUs. Shapes are listed at several OCPU counts, e.g. `BM.Standard3.64 (16c)`.
+**OCVS host prices** come from Oracle's OCVS pricing reference (e.g. BM.DenseIO.E4.128: $7,142.40 on-demand, $4,642.56 1-year, $3,571.20 3-year per node per month at 744 hours). The public price-list API's per-OCPU OCVS SKUs don't match that reference, so they aren't used for hosts. When Oracle updates OCVS pricing, edit `OCVS_REFERENCE` and re-run the script.
 
 ## Simple by default, advanced when you need it
 

@@ -11,28 +11,16 @@ window.CATALOG = {
   providers: {
     ocvs: {
       name: "OCVS", longName: "Oracle Cloud VMware Solution", defaultRegion: "eu-frankfurt-1", minNodes: 3,
-      source: "Oracle Cloud price list API (apexapps.oracle.com/pls/apex/cetools/api/v1/products) and oracle.com/cloud/price-list",
-      // Oracle bills every OCPU enabled on the host. "(32c)" etc. = host with that many OCPUs enabled.
+      source: "Oracle OCVS pricing reference (monthly per node at 744 hours; 1-year and 3-year commitment discounts)",
       shapes: [
         { id: "BM.DenseIO2.52", cores: 52, memory: "768 GB", storage: "51.2 TB NVMe (vSAN)" },
-        { id: "BM.DenseIO.E4.128 (32c)", cores: 32, memory: "2,048 GB", storage: "54.4 TB NVMe (vSAN)" },
-        { id: "BM.DenseIO.E4.128 (64c)", cores: 64, memory: "2,048 GB", storage: "54.4 TB NVMe (vSAN)" },
         { id: "BM.DenseIO.E4.128", cores: 128, memory: "2,048 GB", storage: "54.4 TB NVMe (vSAN)" },
-        { id: "BM.DenseIO.E5.128 (32c)", cores: 32, memory: "1,536 GB", storage: "81.6 TB NVMe (vSAN)" },
-        { id: "BM.DenseIO.E5.128 (64c)", cores: 64, memory: "1,536 GB", storage: "81.6 TB NVMe (vSAN)" },
-        { id: "BM.DenseIO.E5.128 (96c)", cores: 96, memory: "1,536 GB", storage: "81.6 TB NVMe (vSAN)" },
         { id: "BM.DenseIO.E5.128", cores: 128, memory: "1,536 GB", storage: "81.6 TB NVMe (vSAN)" },
-        { id: "BM.Standard2.52 (12c)", cores: 12, memory: "768 GB", storage: "Block Volume" },
         { id: "BM.Standard2.52", cores: 52, memory: "768 GB", storage: "Block Volume" },
-        { id: "BM.Standard3.64 (16c)", cores: 16, memory: "1,024 GB", storage: "Block Volume" },
-        { id: "BM.Standard3.64 (32c)", cores: 32, memory: "1,024 GB", storage: "Block Volume" },
         { id: "BM.Standard3.64", cores: 64, memory: "1,024 GB", storage: "Block Volume" },
-        { id: "BM.Standard.E4.128 (32c)", cores: 32, memory: "2,048 GB", storage: "Block Volume" },
-        { id: "BM.Standard.E4.128 (64c)", cores: 64, memory: "2,048 GB", storage: "Block Volume" },
         { id: "BM.Standard.E4.128", cores: 128, memory: "2,048 GB", storage: "Block Volume" },
-        { id: "BM.Standard.E5.192 (48c)", cores: 48, memory: "2,304 GB", storage: "Block Volume" },
-        { id: "BM.Standard.E5.192 (96c)", cores: 96, memory: "2,304 GB", storage: "Block Volume" },
-        { id: "BM.Standard.E5.192", cores: 192, memory: "2,304 GB", storage: "Block Volume" }
+        { id: "BM.Standard.E5.192", cores: 192, memory: "2,304 GB", storage: "Block Volume" },
+        { id: "BM.Optimized3.36", cores: 36, memory: "512 GB", storage: "Block Volume" }
       ]
     },
     avs: {
