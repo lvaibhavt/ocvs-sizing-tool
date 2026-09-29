@@ -27,9 +27,9 @@ Prices come live from two companion tools, so updating them there updates this t
 ## What you get
 
 - **Workload profile**: CPU-heavy, memory-heavy, storage-heavy or balanced.
-- **Cheapest shape and host count for each cloud**, with monthly, annual and term cost, and the difference against OCVS,, with the resulting cores, RAM, and raw and usable vSAN capacity.
+- **Cheapest shape and host count for each cloud**, with monthly, annual and term cost, and the difference against OCVS, plus the resulting cores, RAM and usable vSAN capacity.
 - **Sizing driver**: CPU, RAM, storage or minimum cluster size.
-- **For storage-driven results**: an alternative that sizes hosts for compute only and puts the extra storage (in TB) on external storage. That's OCI Block Volume, Azure NetApp Files or Elastic SAN, Google Cloud NetApp Volumes, or FSx for NetApp ONTAP.
+- **Storage-heavy workloads**: when it is cheaper, hosts are sized for compute only and the rest of the storage (in TB, with its monthly cost) goes on external storage. That's OCI Block Volume, Azure NetApp Files or Elastic SAN, Google Cloud NetApp Volumes, or FSx for NetApp ONTAP.
 - **A table of every shape**, so you can see the trade-offs.
 
 ## Sizing logic
