@@ -273,20 +273,23 @@ function buildProvSel(){
     const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
     return `<div class="pbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
       <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div>
-      <div class="field" id="f_st_${p}"><label>External storage</label><select id="st_${p}"></select></div>${p === "gcve" ? `<p style="font-size:12px;color:var(--muted);margin:6px 0 0">Storage-only vSAN nodes are also compared for ve2 shapes, same term as the hosts.</p>` : ""}</div>`;
+      <div class="field" id="f_st_${p}"><label>Additional storage</label><select id="st_${p}"></select></div></div>`;
   }).join("");
   ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; fillStorage(p); });
 }
 function fillStorage(p){
   const list = storageChoices(p, $("reg_"+p).value);
-  $("st_"+p).innerHTML = list.length
-    ? list.map(c => `<option value="${c.key}">${esc(c.name)} (${c.kind === "block" ? "block" : "NFS"}) · ${esc(c.tier)}</option>`).join("")
-    : `<option value="">None in this region</option>`;
+  const cur = $("st_"+p).value;
+  $("st_"+p).innerHTML = `<option value="">None: vSAN on hosts only</option>` +
+    (p === "gcve" ? `<option value="so">Storage-only vSAN nodes (ve2, matching size class)</option>` : "") +
+    list.map(c => `<option value="${c.key}">${esc(c.name)} (${c.kind === "block" ? "block" : "NFS"}) · ${esc(c.tier)}</option>`).join("");
+  if ([...$("st_"+p).options].some(o => o.value === cur)) $("st_"+p).value = cur;
 }
 function summaries(){
   const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k]($(k).value)}</i>` : LBL[k]($(k).value));
   const regChg = ORDER.filter(p => $("reg_"+p).value !== P.providers[p].defaultRegion).length;
-  $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt"].join(" · ");
+  $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt", (n => n ? `<i>extra storage on ${n}</i>` : "vSAN only")(ORDER.filter(p => $("st_"+p).value).length)].join(" · ");
+  ORDER.forEach(p => $("f_st_"+p).classList.toggle("chg", !!$("st_"+p).value));
   $("sumA").innerHTML = sum(["aRatio","aGrowth","aHa","aPol","aSlack"]).join(" · ") + (["aRamOc","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
   [...PKEYS, ...AKEYS].forEach(k => $(k).closest(".field").classList.toggle("chg", changed(k)));
   ORDER.forEach(p => $("f_reg_"+p).classList.toggle("chg", $("reg_"+p).value !== P.providers[p].defaultRegion));
@@ -300,7 +303,7 @@ toggle($("tgP"),"dP"); toggle($("tgA"),"dA");
 document.querySelectorAll("[data-reset]").forEach(b => b.onclick = () => {
   const keys = b.dataset.reset === "p" ? PKEYS : AKEYS;
   keys.forEach(k => $(k).value = DEF[k]);
-  if (b.dataset.reset === "p") ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); });
+  if (b.dataset.reset === "p") ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); $("st_"+p).value = ""; });
   update();
 });
 
@@ -402,8 +405,12 @@ function priceShape(s,req,a,ctx){
   const pc = ctx[s.p], rate = (pc.rates[s.id] || {})[ctx.term];
   const {need, plans} = size(s,req,a);
   if (typeof rate !== "number") return {s, need, plan:plans[0], na:"No price in this region / term"};
+  // Use the storage the user chose; vSAN-only when nothing extra is needed or nothing was chosen
+  const want = pc.choice === "so" ? "so" : pc.choice ? "ext" : null;
+  const pl0 = (want && plans.find(pl => pl.kind === want)) || plans.find(pl => pl.kind === "vsan");
+  if (!pl0) return {s, need, plan:plans[0], na:s.raw ? "Storage-only nodes not supported on this shape" : "No local vSAN: choose additional storage"};
   let best = null;
-  for (const pl of plans) {
+  for (const pl of [pl0]) {
     if (pl.kind === "ext" && !pc.storage) continue;
     pl.nodeCost = pl.hosts*rate*ctx.hours;
     if (pl.kind === "so") {
@@ -414,7 +421,7 @@ function priceShape(s,req,a,ctx){
     pl.total = pl.nodeCost + pl.stoCost;
     if (!best || pl.total < best.total) best = pl;
   }
-  if (!best) return {s, need, plan:plans[0], na:"Needs external storage; none in this region"};
+  if (!best) return {s, need, plan:pl0, na:"No price for the chosen storage in this region / term"};
   return {s, need, rate, plan:best};
 }
 function assumptions(){ return {ratio:+$("aRatio").value||4, ramOc:+$("aRamOc").value||1, growth:(+$("aGrowth").value||0)/100,
@@ -436,7 +443,7 @@ function update(){
     const region = $("reg_"+p).value, rates = {};
     for (const s of Calc.listShapes(P, p, region, {evsBasis:$("evsBasis").value})) rates[s.id] = s.rates;
     const key = $("st_"+p).value;
-    ctx[p] = {region, rates, storage:storageChoices(p, region).find(c => c.key === key) || null};
+    ctx[p] = {region, rates, choice:key, storage:storageChoices(p, region).find(c => c.key === key) || null};
   }
   const results = SHAPES.map(s => priceShape(s, req, a, ctx));
   const by = {}, cheapest = {}, shown = {};
@@ -493,7 +500,7 @@ function needBars(r){
   if (pl.kind === "so") calc += `${pl.hosts > Math.max(n.compute, n.min) ? ` · raised to <b>${pl.hosts}</b> HCI (storage-only ≤ 50%)` : ""} → <b>${pl.hosts} HCI + ${pl.so} storage-only</b>`;
   else calc += ` → <b>${pl.hosts} hosts</b>`;
   return `<h4>Nodes needed per resource</h4>${row("CPU", n.cpu, drv==="CPU")}${row("RAM", n.ram, drv==="RAM")}${row("Storage", stoLbl, drv==="Storage")}
-    <div class="calc">${calc}${pl.kind === "ext" && n.sto != null ? `<br>Storage on vSAN alone would need ${n.sto} nodes. External storage is cheaper.` : ""}${pl.kind === "so" ? `<br>Storage on HCI nodes alone would need ${n.sto}. Storage-only nodes are cheaper.` : ""}${n.sto == null ? "<br>No local vSAN: all storage is external." : ""}</div>`;
+    <div class="calc">${calc}${pl.kind === "ext" && n.sto != null ? `<br>Storage on vSAN alone would need ${n.sto} nodes. The rest goes on the additional storage you chose.` : ""}${pl.kind === "so" ? `<br>Storage on HCI nodes alone would need ${n.sto}. The rest goes on the storage-only nodes you chose.` : ""}${n.sto == null ? "<br>No local vSAN: all storage is external." : ""}</div>`;
 }
 
 function card(p, rank, r, cheap, ocvs, months){
