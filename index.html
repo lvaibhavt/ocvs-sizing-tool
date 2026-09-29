@@ -233,6 +233,18 @@ table.fit th{font-size:10.5px;vertical-align:bottom}
 table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
 .dt{overflow:visible}
 @media (max-width:820px){.dt{overflow-x:auto}}
+.srcs{margin-top:32px}
+.srcs h2{margin:0 0 6px;font-size:20px}
+.srcs .lead{font-size:13px;color:var(--muted);margin:0 0 14px}
+.sgrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.sc{border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:12px 14px;font-size:13px}
+.sc h3{margin:0 0 6px;font-size:14.5px}
+.sc ul{margin:0;padding-left:18px}
+.sc li{margin:6px 0}
+.sc a{color:inherit;text-decoration:underline}
+.sc li.rule{background:var(--chgbg);border-radius:8px;padding:8px 10px;list-style:none;margin-left:-18px}
+.minnote{margin-top:6px;color:var(--chg);font-weight:600}
+.minnote a{color:inherit}
 </style>
 </head>
 <body>
@@ -320,7 +332,7 @@ table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
 
   <div id="out"></div>
 
-  <p class="foot" id="sources"></p>
+  <section class="panel srcs" id="sources"></section>
 </main>
 
 <script>
@@ -377,6 +389,11 @@ function perf(c, tb){
   return {iops, mbps, vols};
 }
 const perfText = (c, tb) => { const x = perf(c, tb); return [x.iops ? `~${fmt(x.iops)} IOPS` : null, x.mbps ? `~${fmt(x.mbps)} MB/s` : null].filter(Boolean).join(" · ") || "Not published"; };
+// When a storage option has a minimum (Azure Elastic SAN for AVS: 16 TiB base capacity), say so.
+function minNote(ch, tb){
+  if (!ch || !ch.minGiB || tb * GIB_PER_TB >= ch.minGiB) return "";
+  return `You need ${tb.toFixed(1)} TB, but ${ch.name} for ${ch.opt.platform === "avs" ? "Azure VMware Solution" : "this service"} has a minimum of ${ch.minGiB / 1024} TB, so ${ch.minGiB / 1024} TB is billed.`;
+}
 function storageCost(ch, tb, hours){
   if (!ch || tb <= 0) return 0;
   return Math.max(tb * GIB_PER_TB, ch.minGiB) * ch.price * (ch.hourly ? hours : 1);
@@ -710,7 +727,7 @@ function card(p, rank, r, cheap, ocvs, months){
      <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(regionName(p, last.ctx[p].region))}`}</div></div>
    <div class="need">${needBars(r)}</div>
    ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
-   ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span></div>` : ""}
+   ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span>${minNote(st, pl.ext) ? `<div class="minnote">⚠ ${minNote(st, pl.ext)} <a href="#src-avs-min">Why?</a></div>` : ""}</div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
    <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
    <button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button></div>`;
@@ -734,7 +751,7 @@ function deckModel(){
   const {ctx, shown, term, hours, req} = last, T = Calc.TERMS[term], months = T.months;
   const cols = ORDER.filter(p => shown[p]), base = shown.ocvs;
   const row = (label, f, o = {}) => ({label, cells: cols.map(p => f(shown[p], p)), ...o});
-  const sto = (r, p) => r.plan.kind === "so" ? `${r.plan.so} × ${r.plan.soId}` : r.plan.ext ? `${r.plan.ext.toFixed(0)} TB ${ctx[p].storage.name}` : "None (vSAN only)";
+  const sto = (r, p) => r.plan.kind === "so" ? `${r.plan.so} × ${r.plan.soId}` : r.plan.ext ? `${r.plan.ext.toFixed(1)} TB ${ctx[p].storage.name}${minNote(ctx[p].storage, r.plan.ext) ? ` (billed at ${ctx[p].storage.minGiB / 1024} TB minimum)` : ""}` : "None (vSAN only)";
   const save = (r, p, m) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * m;
     return `${d < 0 ? "−" : ""}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * m) * 100)}%)`; };
   const rows = [
@@ -803,7 +820,7 @@ function tableView(ranked, months){
   ${row("Usable vSAN", r => r.s.raw || r.plan.so ? `${r.plan.usable.toFixed(1)} TB (${r.plan.pol})` : "—")}
   ${sec("Additional storage")}
   ${row("Option", stoName)}
-  ${row("Capacity", r => r.plan.kind === "so" ? `${(r.plan.so * r.plan.soRaw).toFixed(1)} TB raw` : r.plan.ext ? r.plan.ext.toFixed(1) + " TB" : "—")}
+  ${row("Capacity", (r, p) => r.plan.kind === "so" ? `${(r.plan.so * r.plan.soRaw).toFixed(1)} TB raw` : r.plan.ext ? r.plan.ext.toFixed(1) + " TB" + (minNote(ctx[p].storage, r.plan.ext) ? `<br><span class="minnote">⚠ billed at the ${ctx[p].storage.minGiB / 1024} TB minimum (<a href="#src-avs-min">why</a>)</span>` : "") : "—")}
   ${row("Expected performance", (r, p) => r.plan.ext ? perfText(ctx[p].storage, r.plan.ext) : r.plan.kind === "so" ? "vSAN (local NVMe)" : "—")}
   ${sec(`${T.short} pricing`)}
   ${row("Rate / node / hour", r => "$" + r.rate.toFixed(2))}
@@ -834,7 +851,34 @@ document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preve
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
 buildProvSel();
 [...PKEYS, ...AKEYS, "mCpu", "mRam", "mSto"].forEach(k => $(k).addEventListener("input", update));
-$("sources").innerHTML = `Prices fetched ${P.asOf} directly from each vendor: <a href="https://www.oracle.com/cloud/price-list/">Oracle Cloud price list</a> (API), <a href="https://prices.azure.com/api/retail/prices">Azure Retail Prices API</a>, Google Cloud pricing pages (<a href="https://cloud.google.com/vmware-engine/pricing">VMware Engine</a>, <a href="https://cloud.google.com/netapp/volumes/pricing">NetApp Volumes</a>, <a href="https://cloud.google.com/filestore/pricing">Filestore</a>) and the <a href="https://aws.amazon.com/evs/pricing/">AWS Price List</a> (EVS, EC2, FSx). Public list prices, BYOL. Excludes VCF licences, networking, egress, backup, support and taxes. External storage is pay-as-you-go. Indicative only, not a quote.`;
+const L = (t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+$("sources").innerHTML = `
+  <h2>Pricing sources &amp; rules</h2>
+  <p class="lead">Prices were fetched on <b>${P.asOf}</b> from each vendor's own price source. They're public list prices in USD, BYOL (the VMware Cloud Foundation licence is not included). Excluded: networking, egress, backup, support and taxes. Indicative only, not a quote.</p>
+  <div class="sgrid2">
+   <div class="sc" style="--c:var(--ocvs)"><h3>Oracle Cloud VMware Solution</h3><ul>
+    <li><b>Hosts:</b> Oracle's OCVS pricing reference: monthly price per node at 744 hours, with on-demand, 1-year and 3-year commitment prices. It's not published as a public web page; Oracle's public price list is ${L("oracle.com/cloud/price-list (VMware)", "https://www.oracle.com/cloud/price-list/#vmware")}.</li>
+    <li><b>Block Volume / File Storage:</b> ${L("Oracle Cloud price list", "https://www.oracle.com/cloud/price-list/#block-volume")} (Block Volume $0.0255/GB-month + $0.0017 per VPU; Balanced = 10 VPU = $0.0425), via the ${L("price list API", "https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyCode=USD")}. Check it in the ${L("OCI cost estimator", "https://www.oracle.com/cloud/costestimator.html")}.</li>
+    <li><b>Rules:</b> minimum 3 hosts per cluster (${L("OCVS overview", "https://docs.oracle.com/en-us/iaas/Content/VMware/Concepts/ocvsoverview.htm")}). Block Volume performance by level: ${L("Block Volume performance", "https://docs.oracle.com/en-us/iaas/Content/Block/Concepts/blockvolumeperformance.htm")}.</li>
+   </ul></div>
+   <div class="sc" style="--c:var(--avs)"><h3>Azure VMware Solution</h3><ul>
+    <li><b>Hosts:</b> ${L("Azure VMware Solution pricing", "https://azure.microsoft.com/en-us/pricing/details/azure-vmware/")} (VCF BYOL), via the ${L("Azure Retail Prices API", "https://prices.azure.com/api/retail/prices?$filter=contains(productName,'Azure VMware Solution')")}. Reserved prices (1 and 3 years) are the term total divided by the hours in the term.</li>
+    <li><b>Storage:</b> ${L("Azure Elastic SAN pricing", "https://azure.microsoft.com/en-us/pricing/details/elastic-san/")} and ${L("Azure NetApp Files pricing", "https://azure.microsoft.com/en-us/pricing/details/netapp/")}. Check them in the ${L("Azure pricing calculator", "https://azure.microsoft.com/en-us/pricing/calculator/")}.</li>
+    <li id="src-avs-min" class="rule"><b>⚠ 16 TiB minimum for Elastic SAN with AVS:</b> Microsoft requires an Elastic SAN with at least <b>16 TiB of base capacity</b> to use it as an AVS datastore. See ${L("Use Azure Elastic SAN with Azure VMware Solution (prerequisites)", "https://learn.microsoft.com/en-us/azure/azure-vmware/configure-azure-elastic-san")}. So if you need less (e.g. 2.4 TB), this tool bills 16 TiB (16 × 1,024 GiB × $0.095 = $1,556/month in Germany West Central). The Azure calculator prices Elastic SAN on its own and doesn't apply this rule, which is why it shows less.</li>
+    <li><b>Rules:</b> minimum 3 hosts per cluster (${L("AVS introduction", "https://learn.microsoft.com/en-us/azure/azure-vmware/introduction")}).</li>
+   </ul></div>
+   <div class="sc" style="--c:var(--gcve)"><h3>Google Cloud VMware Engine</h3><ul>
+    <li><b>Hosts and storage-only nodes:</b> ${L("VMware Engine pricing", "https://cloud.google.com/vmware-engine/pricing")} (per region: on-demand, 1-year and 3-year monthly-payment prices).</li>
+    <li><b>Storage:</b> ${L("NetApp Volumes pricing", "https://cloud.google.com/netapp/volumes/pricing")} and ${L("Filestore pricing", "https://cloud.google.com/filestore/pricing")} (Zonal/Regional, custom performance off). Check them in the ${L("Google Cloud pricing calculator", "https://cloud.google.com/products/calculator")}.</li>
+    <li><b>Rules:</b> minimum 3 nodes (${L("private clouds", "https://cloud.google.com/vmware-engine/docs/concepts-private-cloud")}). Storage-only nodes must match the size class of the cluster's nodes, and at most 50% of a cluster can be storage-only (${L("storage-only nodes", "https://cloud.google.com/vmware-engine/docs/concepts-storage-only-nodes")}).</li>
+   </ul></div>
+   <div class="sc" style="--c:var(--evs)"><h3>Amazon Elastic VMware Service</h3><ul>
+    <li><b>Hosts:</b> ${L("EVS pricing", "https://aws.amazon.com/evs/pricing/")} (EVS fee per host-hour) + the EC2 bare-metal instance price: ${L("EC2 on-demand", "https://aws.amazon.com/ec2/pricing/on-demand/")}, ${L("EC2 Instance Savings Plans", "https://aws.amazon.com/savingsplans/compute-pricing/")} for 1 and 3 years (no upfront; the default), or ${L("Dedicated Hosts", "https://aws.amazon.com/ec2/dedicated-hosts/pricing/")}. Data from the ${L("AWS Price List", "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEVS/current/region_index.json")}.</li>
+    <li><b>Storage:</b> ${L("FSx for NetApp ONTAP pricing", "https://aws.amazon.com/fsx/netapp-ontap/pricing/")}. Only SSD capacity is included; throughput capacity and extra IOPS cost more. Check it in the ${L("AWS pricing calculator", "https://calculator.aws/")}.</li>
+    <li><b>Rules:</b> minimum 4 hosts per cluster (${L("EVS FAQs", "https://aws.amazon.com/evs/faqs/")}).</li>
+   </ul></div>
+  </div>
+  <p class="lead" style="margin-top:14px"><b>Units:</b> 1 TB = 1,024 GB for all storage pricing, as in the vendor calculators. Monthly price = hourly rate × hours per month (744 by default).</p>`;
 setView(view);
 update();
 </script>
