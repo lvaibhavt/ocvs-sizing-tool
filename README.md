@@ -15,9 +15,24 @@ This tool sizes a VMware workload by host shape across four clouds:
 
 It sizes every host shape, prices it, and recommends the cheapest fit on each cloud.
 
-Prices come live from two companion tools, so updating them there updates this tool too:
-- Host prices: [VMware Cloud Pricing Compare](https://lvaibhavt.github.io/vmware-cloud-pricing-compare/) (`data/pricing.js`, `data/regional-prices.js`)
-- External storage prices: [OCVS External Storage Pricing](https://lvaibhavt.github.io/ocvs-external-storage-pricing/) (`data/storage.js`, `data/regions.js`)
+Prices come **directly from each vendor**, not from other tools:
+
+| Cloud | Hosts | Storage |
+|---|---|---|
+| OCVS | [Oracle Cloud price list API](https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/) (same as oracle.com/cloud/price-list) | Block Volume, File Storage (same API) |
+| AVS | [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) (VCF BYOL, all regions) | Elastic SAN, Azure NetApp Files (same API) |
+| GCVE | [VMware Engine pricing page](https://cloud.google.com/vmware-engine/pricing) (every region's table) | Storage-only nodes (same page), [NetApp Volumes](https://cloud.google.com/netapp/volumes/pricing), [Filestore](https://cloud.google.com/filestore/pricing) |
+| Amazon EVS | [AWS Price List](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEVS/current/region_index.json) (EVS fee) + AWS pricing-page data (EC2 on-demand, EC2 Instance Savings Plans, Dedicated Host) | FSx for NetApp ONTAP (AWS Price List) |
+
+### Refreshing prices
+
+```bash
+python tools/fetch_prices.py
+```
+
+This rewrites `data/prices.js` (a few minutes; no credentials needed). Commit the file and the site updates. Host specs, regions and storage documentation live in `data/catalog.js`.
+
+**OCVS pricing model (from Oracle's price list):** Dense shapes are billed per OCPU-hour for every OCPU enabled on the host (e.g. BM.DenseIO.E4.128 = 128 × the per-OCPU rate); BM.DenseIO.E5 per 32-OCPU unit; Standard shapes as a Base node plus Expansion OCPUs. Shapes are listed at several OCPU counts, e.g. `BM.Standard3.64 (16c)`.
 
 ## Simple by default, advanced when you need it
 
@@ -65,6 +80,6 @@ Switch on **Advanced configuration** to change the commitment, hours, regions, s
 
 ## Host shapes
 
-Host shapes, specs and prices come from the node pricing tool's data files. GPU shapes are excluded.
+Host shapes and specs are in `data/catalog.js`; prices in `data/prices.js`. GPU shapes are excluded.
 
 It's a static single-page app with no backend, hosted on GitHub Pages.

@@ -10,12 +10,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="js/ppt.js"></script>
-<!-- Shared price data: host prices from vmware-cloud-pricing-compare, storage prices from ocvs-external-storage-pricing -->
-<script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/regional-prices.js"></script>
-<script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/pricing.js"></script>
-<script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/js/calc.js"></script>
-<script src="https://lvaibhavt.github.io/ocvs-external-storage-pricing/data/storage.js"></script>
-<script src="https://lvaibhavt.github.io/ocvs-external-storage-pricing/data/regions.js"></script>
+<!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
+<script src="data/catalog.js"></script>
+<script src="data/prices.js"></script>
+<script src="js/data.js"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -354,8 +352,8 @@ function storageChoices(p, region){
     const ov = reg.avail[o.id] || {};
     for (const t of o.tiers || []) {
       if (t.pool || /-add$/.test(t.id)) continue;
-      const hourly = t.priceHr != null;
-      const price = typeof ov[t.id] === "number" ? ov[t.id] : (hourly ? t.priceHr : t.price);
+      const hourly = !!t.hourly;
+      const price = ov[t.id];
       if (typeof price !== "number") continue;
       out.push({key:o.id+"|"+t.id, name:o.name, tier:t.label, kind:o.kind, hourly, price,
         minGiB:o.id === "elastic-san" ? 16*1024 : 0, def:!!t.default, opt:o, t});
@@ -835,7 +833,7 @@ document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preve
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
 buildProvSel();
 [...PKEYS, ...AKEYS, "mCpu", "mRam", "mSto"].forEach(k => $(k).addEventListener("input", update));
-$("sources").innerHTML = `Host prices: <a href="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/">VMware Cloud Pricing Compare</a> (as of ${P.asOf}). Storage prices: <a href="https://lvaibhavt.github.io/ocvs-external-storage-pricing/">OCVS External Storage Pricing</a> (as of ${S.asOf}). Public list prices, BYOL. Excludes VCF licences, networking, egress, backup, support and taxes. External storage is pay-as-you-go. Indicative only, not a quote.`;
+$("sources").innerHTML = `Prices fetched ${P.asOf} directly from each vendor: <a href="https://www.oracle.com/cloud/price-list/">Oracle Cloud price list</a> (API), <a href="https://prices.azure.com/api/retail/prices">Azure Retail Prices API</a>, Google Cloud pricing pages (<a href="https://cloud.google.com/vmware-engine/pricing">VMware Engine</a>, <a href="https://cloud.google.com/netapp/volumes/pricing">NetApp Volumes</a>, <a href="https://cloud.google.com/filestore/pricing">Filestore</a>) and the <a href="https://aws.amazon.com/evs/pricing/">AWS Price List</a> (EVS, EC2, FSx). Public list prices, BYOL. Excludes VCF licences, networking, egress, backup, support and taxes. External storage is pay-as-you-go. Indicative only, not a quote.`;
 setView(view);
 update();
 </script>
