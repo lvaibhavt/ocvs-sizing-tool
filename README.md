@@ -20,7 +20,7 @@ Prices come live from two companion tools, so updating them there updates this t
 1. Choose one input method:
    - **Upload an RVTools report** (`.xlsx`). The tool reads the `vInfo` sheet and totals vCPU, RAM and storage. You can include only powered-on VMs, and use either in-use or provisioned storage. The file stays in your browser.
    - **Enter the numbers manually**: total vCPU, RAM (GB) and storage (TB).
-2. Choose the commitment (3-year by default), hours per month (744), and for each cloud the region and the external storage option.
+2. Choose the commitment (3-year by default), hours per month (744), and for each cloud the region and, if you want it, an additional storage option.
 3. Optionally, adjust the sizing assumptions: vCPU:core ratio, growth, N+1 HA, vSAN policy, slack and dedup.
 4. Click **Size and price it**.
 
@@ -37,8 +37,10 @@ Prices come live from two companion tools, so updating them there updates this t
 - Compute hosts = max(vCPU ÷ (cores × ratio), RAM ÷ usable host RAM), rounded up, plus HA spares.
 - Storage hosts = storage ÷ (raw TB × (1 − slack) ÷ policy factor × dedup), rounded up. If the cluster is too small for RAID-5 or RAID-6, RAID-1 is used instead.
 - Hosts = max(compute hosts, storage hosts, provider minimum). The minimum is 3 hosts on OCVS, AVS and GCVE, and 4 on EVS.
-- Each shape is priced two ways: all storage on vSAN, or hosts sized for compute plus external storage for the rest (with the same free-space headroom). The cheaper plan counts.
-- Shapes with no vSAN (such as OCVS Standard shapes) always use external storage (OCI Block Volume).
+- **Additional storage is an explicit choice per cloud** (Pricing toggle). The default is *None*: all storage on vSAN, adding hosts until it fits.
+- If you pick an option (OCI Block Volume, Azure Elastic SAN or NetApp Files, Google NetApp Volumes or Filestore, Amazon FSx for ONTAP, or **GCVE storage-only vSAN nodes**), hosts are sized for compute and the rest of the storage goes there, with the same free-space headroom.
+- GCVE storage-only nodes match the ve2 size class (e.g. `ve2-mega-so` with `ve2-mega-*`), are at most 50% of the cluster, and use the same commitment term as the hosts.
+- Shapes with no local vSAN (such as OCVS Standard shapes) are only sized when additional storage is chosen.
 - The recommended shape per cloud is the cheapest total. Shapes without a published price for the region and commitment are skipped.
 - Pricing is BYOL. It excludes VCF licences, networking, egress, backup, support, taxes and FSx throughput capacity. External storage is pay-as-you-go.
 
