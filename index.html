@@ -743,7 +743,7 @@ function deckModel(){
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
-    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+$("aGrowth").value ? ` (after ${$("aGrowth").value}% growth)` : ""} ·${T.label} · ${hours} h/month · BYOL`,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+$("aGrowth").value ? ` (after ${$("aGrowth").value}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
