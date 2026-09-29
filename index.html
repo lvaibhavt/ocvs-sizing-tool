@@ -329,7 +329,7 @@ const ORDER = ["ocvs","avs","gcve","evs"];
 const COLOR = {ocvs:"var(--ocvs)",avs:"var(--avs)",gcve:"var(--gcve)",evs:"var(--evs)"};
 const POL = {r1:{f:2,min:3,l:"RAID-1"},r5:{f:4/3,min:4,l:"RAID-5"},r6:{f:1.5,min:6,l:"RAID-6"}};
 const P = window.PRICING, S = window.STORAGE, SR = window.STORAGE_REGIONS;
-const GIB_PER_TB = 1e12 / 2**30;
+const GIB_PER_TB = 1024; // 1 TB = 1,024 GB, as in the OCI and other vendor calculators
 const money = n => "$" + Math.round(n).toLocaleString();
 const kmoney = n => n >= 1e6 ? "$" + (n/1e6).toFixed(2) + "M" : money(n);
 const fmt = n => Math.round(n).toLocaleString();
@@ -369,7 +369,7 @@ function cheapestChoice(p, region, hours){
 }
 // Expected performance for a capacity, from the storage tool's per-TiB figures and caps
 function perf(c, tb){
-  const t = c.t, tib = tb * 1e12 / 2**40;
+  const t = c.t, tib = tb;
   const vols = c.opt.unitMaxTiB ? Math.max(1, Math.ceil(tib / c.opt.unitMaxTiB)) : 1;
   const capMul = /volume/.test(c.opt.capScope || "") ? vols : 1;
   const iops = t.iopsPerTiB ? Math.min(t.iopsPerTiB * tib, t.capIops ? t.capIops * capMul : Infinity) : null;
@@ -528,7 +528,7 @@ function summariseRv(){
     ramMiB += +col(row,["memory"]) || 0;
     stoMiB += +(useProv ? col(row,["provisioned mib","provisioned mb"]) : col(row,["in use mib","in use mb"])) || 0;
   }
-  Object.assign(rv, {vms, cpu, ram:ramMiB/1024, sto:stoMiB*1.048576/1e6});
+  Object.assign(rv, {vms, cpu, ram:ramMiB/1024, sto:stoMiB/1024/1024});
   $("rvInfo").innerHTML = `<b>${esc(rv.name)}</b> · ${vms} VMs · ${fmt(cpu)} vCPU · ${fmt(rv.ram)} GB · ${rv.sto.toFixed(1)} TB`;
 }
 
