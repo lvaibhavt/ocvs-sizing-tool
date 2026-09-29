@@ -150,7 +150,7 @@
     // bars
     const by = 3.0, max = Math.max(...m.bars.map(b => b.value));
     m.bars.forEach((b, i) => {
-      const y = by + i * 0.3, x0 = M + 1.9, bw = W - 2 * M - 1.9 - 1.9;
+      const y = by + i * 0.26, x0 = M + 1.9, bw = W - 2 * M - 1.9 - 1.9;
       T(b.name, { x: M, y, w: 1.8, h: 0.24, fontSize: 11.5, color: K.text, valign: "middle" });
       s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: bw, h: 0.15, rectRadius: 0.07, fill: { color: K.soft }, line: { color: K.soft } });
       s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: Math.max(0.05, bw * b.value / max), h: 0.15, rectRadius: 0.07, fill: { color: b.color }, line: { color: b.color } });
@@ -158,7 +158,7 @@
     });
 
     // cards
-    const cy = by + m.bars.length * 0.3 + 0.2, ch = H - cy - 0.35, gap = 0.22, n = m.cards.length;
+    const cy = by + m.bars.length * 0.26 + 0.18, ch = H - cy - 0.35, gap = 0.22, n = m.cards.length;
     const cw = (W - 2 * M - gap * (n - 1)) / n;
     m.cards.forEach((c, i) => {
       const x = M + i * (cw + gap), px = x + 0.18, iw = cw - 0.36;
@@ -181,7 +181,7 @@
         T(r.v == null ? "–" : `${r.v} node${r.v === 1 ? "" : "s"}`, { x: px + iw - 0.72, y, w: 0.72, h: 0.22, fontSize: 10, bold: r.d, color: K.text, align: "right", valign: "middle" });
       });
       T(c.calc, { x: px, y: cy + 2.95, w: iw, h: 0.26, fontSize: 9, color: K.muted, fit: "shrink" });
-      if (c.storage) T(c.storage, { x: px, y: cy + 3.22, w: iw, h: 0.5, fontSize: 9, color: c.minWarn ? K.warn : K.text, fit: "shrink", valign: "top" });
+      if (c.storage) T(c.storage, { x: px, y: cy + 3.2, w: iw, h: 0.62, fontSize: 9, color: c.minWarn ? K.warn : K.text, fit: "shrink", valign: "top" });
       // specs and costs
       const sy = cy + ch - 0.95, third = iw / 3;
       s.addShape(pptx.ShapeType.line, { x: px, y: sy - 0.06, w: iw, h: 0, line: { color: K.line, width: 0.75 } });

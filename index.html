@@ -757,7 +757,7 @@ function cardsModel(){
     if (pl.kind === "so") return `+ ${pl.so} × ${pl.soId} storage-only nodes (${pl.soRaw} TB raw each) = ${money(pl.stoCost)}/mo`;
     if (!pl.ext) return "";
     const mn = minNote(st, pl.ext);
-    return `+ ${pl.ext.toFixed(1)} TB ${st.name} · ${st.tier} = ${money(pl.stoCost)}/mo${st.opt.id.startsWith("fsx") ? " (throughput not included)" : ""}${mn ? "\n⚠ " + mn : ""}`; };
+    return `+ ${pl.ext.toFixed(1)} TB ${st.name} · ${st.tier} = ${money(pl.stoCost)}/mo${st.opt.id.startsWith("fsx") ? " (throughput not included)" : ""}${mn ? `\n⚠ Billed at the ${st.minGiB / 1024} TB minimum for ${st.name} with AVS (need ${pl.ext.toFixed(1)} TB)` : ""}`; };
   const calcLine = r => { const n = r.need, pl = r.plan;
     let c = `max(CPU ${n.cpu}, RAM ${n.ram})${n.ha ? ` + ${n.ha} HA` : ""} = ${n.compute}`;
     if (pl.kind === "vsan" && n.sto > n.compute) c += ` · storage needs ${n.sto}`;
