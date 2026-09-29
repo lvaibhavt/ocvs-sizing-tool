@@ -127,68 +127,84 @@
   const K = { dark: "1D1F27", text: "15181D", muted: "667080", line: "E3E6EB", soft: "F3F4F7", good: "15803D", bad: "C2410C", warn: "B45309" };
   const F = "Segoe UI";
 
-  function slideCards(pptx, m) {
+  // Slide 1: executive summary
+  function slideSummary(pptx, m) {
     const s = pptx.addSlide();
     s.background = { color: "FFFFFF" };
     banner(pptx, s);
     const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
-    // header band
-    s.addShape(pptx.ShapeType.rect, { x: 0, y: 0.34, w: W, h: 1.25, fill: { color: K.dark }, line: { color: K.dark } });
-    T("Which cloud runs this VMware estate for less?", { x: M, y: 0.46, w: W - 2 * M, h: 0.6, fontSize: 28, bold: true, color: "FFFFFF" });
-    T(m.subtitle, { x: M, y: 1.08, w: W - 2 * M, h: 0.35, fontSize: 12.5, color: "C9CDD6" });
+    T("EXECUTIVE SUMMARY", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
+    T(m.headline, { x: M, y: 0.92, w: W - 2 * M, h: 0.75, fontSize: 30, bold: true, color: K.text, fit: "shrink" });
+    T(m.subhead, { x: M, y: 1.68, w: W - 2 * M, h: 0.35, fontSize: 14, color: K.muted });
 
-    // winner
-    const wy = 1.78, wh = 1.05, w = m.winner;
-    s.addShape(pptx.ShapeType.roundRect, { x: M, y: wy, w: W - 2 * M, h: wh, rectRadius: 0.1, fill: { color: "FFFFFF" }, line: { color: K.line, width: 1 } });
-    s.addShape(pptx.ShapeType.rect, { x: M, y: wy, w: 0.1, h: wh, fill: { color: w.color }, line: { color: w.color } });
-    T([{ text: "LOWEST COST", options: { fontSize: 11, bold: true, color: K.muted, charSpacing: 2, breakLine: true } },
-       { text: w.name, options: { fontSize: 22, bold: true, color: K.text, breakLine: true } },
-       { text: w.desc, options: { fontSize: 12.5, color: K.muted } }], { x: M + 0.35, y: wy + 0.08, w: 9.5, h: wh - 0.16, valign: "middle" });
-    T([{ text: w.price, options: { fontSize: 30, bold: true, color: K.text, breakLine: true } },
-       { text: w.sub, options: { fontSize: 11.5, color: K.muted } }], { x: W - M - 5.2, y: wy + 0.08, w: 4.95, h: wh - 0.16, align: "right", valign: "middle" });
+    // requirement panel (left)
+    const py = 2.35, ph = 4.35, lw = 4.3;
+    s.addShape(pptx.ShapeType.roundRect, { x: M, y: py, w: lw, h: ph, rectRadius: 0.1, fill: { color: K.soft }, line: { color: K.soft } });
+    T("YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
+    m.req.forEach(([v, l], i) => T([{ text: v, options: { fontSize: 30, bold: true, color: K.text, breakLine: true } }, { text: l, options: { fontSize: 12, color: K.muted } }],
+      { x: M + 0.3, y: py + 0.65 + i * 0.95, w: lw - 0.6, h: 0.85 }));
+    s.addShape(pptx.ShapeType.line, { x: M + 0.3, y: py + 3.5, w: lw - 0.6, h: 0, line: { color: "D5D9E1", width: 1 } });
+    T([{ text: "Recommended on " + m.winner.short, options: { fontSize: 11, bold: true, color: m.winner.color, breakLine: true } },
+       { text: m.winner.config, options: { fontSize: 12.5, bold: true, color: K.text } }], { x: M + 0.3, y: py + 3.58, w: lw - 0.6, h: 0.7, fit: "shrink" });
 
-    // bars
-    const by = 3.0, max = Math.max(...m.bars.map(b => b.value));
+    // monthly cost comparison (right)
+    const rx = M + lw + 0.5, rw = W - M - rx;
+    T("MONTHLY COST", { x: rx, y: py + 0.05, w: rw, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
+    const max = Math.max(...m.bars.map(b => b.value)), rowH = 0.95, nameW = 2.6, valW = 2.4, bw = rw - nameW - valW - 0.2;
     m.bars.forEach((b, i) => {
-      const y = by + i * 0.26, x0 = M + 1.9, bw = W - 2 * M - 1.9 - 1.9;
-      T(b.name, { x: M, y, w: 1.8, h: 0.24, fontSize: 11.5, color: K.text, valign: "middle" });
-      s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: bw, h: 0.15, rectRadius: 0.07, fill: { color: K.soft }, line: { color: K.soft } });
-      s.addShape(pptx.ShapeType.roundRect, { x: x0, y: y + 0.05, w: Math.max(0.05, bw * b.value / max), h: 0.15, rectRadius: 0.07, fill: { color: b.color }, line: { color: b.color } });
-      T(b.label, { x: W - M - 1.8, y, w: 1.8, h: 0.24, fontSize: 11.5, bold: true, color: K.text, align: "right", valign: "middle" });
+      const y = py + 0.5 + i * rowH;
+      T([{ text: b.long, options: { fontSize: 13, bold: true, color: K.text, breakLine: true } }, { text: b.config, options: { fontSize: 10, color: K.muted } }],
+        { x: rx, y, w: nameW, h: 0.7, valign: "middle", fit: "shrink" });
+      s.addShape(pptx.ShapeType.rect, { x: rx + nameW, y: y + 0.2, w: Math.max(0.08, bw * b.value / max), h: 0.3, fill: { color: b.color }, line: { color: b.color } });
+      T([{ text: b.label, options: { fontSize: 16, bold: true, color: K.text, breakLine: true } }, { text: b.delta, options: { fontSize: 10, bold: true, color: b.deltaColor } }],
+        { x: W - M - valW, y, w: valW, h: 0.7, align: "right", valign: "middle" });
     });
 
-    // cards
-    const cy = by + m.bars.length * 0.26 + 0.18, ch = H - cy - 0.35, gap = 0.22, n = m.cards.length;
+    // savings tiles
+    const ty = py + ph + 0.3, th = H - ty - 0.45, n = m.tiles.length, gap = 0.3;
+    const tw = (W - 2 * M - gap * (n - 1)) / Math.max(n, 1);
+    m.tiles.forEach((t, i) => {
+      const x = M + i * (tw + gap);
+      s.addShape(pptx.ShapeType.roundRect, { x, y: ty, w: tw, h: th, rectRadius: 0.08, fill: { color: t.positive ? "EEF6EE" : "FBEEEE" }, line: { color: t.positive ? "C8E0C9" : "E8C4C1", width: 1 } });
+      T([{ text: t.title, options: { fontSize: 20, bold: true, color: t.positive ? K.good : K.bad, breakLine: true } }, { text: t.sub, options: { fontSize: 12, color: K.text } }],
+        { x: x + 0.25, y: ty + 0.05, w: tw - 0.5, h: th - 0.1, valign: "middle", fit: "shrink" });
+    });
+    T(m.footer, { x: M, y: H - 0.38, w: W - 2 * M, h: 0.28, fontSize: 9, color: K.muted });
+  }
+
+  // Slide 2: recommended configuration on each cloud
+  function slideSolutions(pptx, m) {
+    const s = pptx.addSlide();
+    s.background = { color: "FFFFFF" };
+    banner(pptx, s);
+    const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
+    T("RECOMMENDED CONFIGURATION", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
+    T("The lowest-cost configuration on each cloud that meets the requirement", { x: M, y: 0.92, w: W - 2 * M, h: 0.6, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
+    T(m.subhead, { x: M, y: 1.52, w: W - 2 * M, h: 0.35, fontSize: 13, color: K.muted });
+
+    const cy = 2.1, ch = H - cy - 0.75, n = m.cards.length, gap = 0.25;
     const cw = (W - 2 * M - gap * (n - 1)) / n;
     m.cards.forEach((c, i) => {
-      const x = M + i * (cw + gap), px = x + 0.18, iw = cw - 0.36;
-      s.addShape(pptx.ShapeType.roundRect, { x, y: cy, w: cw, h: ch, rectRadius: 0.08, fill: { color: "FFFFFF" }, line: { color: K.line, width: 1 } });
-      s.addShape(pptx.ShapeType.rect, { x: x + 0.05, y: cy, w: cw - 0.1, h: 0.07, fill: { color: c.color }, line: { color: c.color } });
-      T(c.name, { x: px, y: cy + 0.15, w: iw - 0.55, h: 0.3, fontSize: 11.5, bold: true, color: K.text, fit: "shrink" });
-      s.addShape(pptx.ShapeType.roundRect, { x: x + cw - 0.68, y: cy + 0.16, w: 0.5, h: 0.26, rectRadius: 0.13, fill: { color: c.rank === 1 ? K.good : K.soft }, line: { color: c.rank === 1 ? K.good : K.soft } });
-      T("#" + c.rank, { x: x + cw - 0.68, y: cy + 0.16, w: 0.5, h: 0.26, fontSize: 10.5, bold: true, color: c.rank === 1 ? "FFFFFF" : K.muted, align: "center", valign: "middle" });
-      T([{ text: c.price, options: { fontSize: 22, bold: true, color: K.text } }, { text: " /mo", options: { fontSize: 11, color: K.muted } }], { x: px, y: cy + 0.5, w: iw, h: 0.42 });
-      T(c.delta, { x: px, y: cy + 0.92, w: iw, h: 0.24, fontSize: 10.5, bold: true, color: c.deltaColor });
-      s.addShape(pptx.ShapeType.roundRect, { x: px, y: cy + 1.2, w: iw, h: 0.55, rectRadius: 0.06, fill: { color: K.soft }, line: { color: K.soft } });
-      T([{ text: c.shape, options: { fontSize: 12, bold: true, color: K.text, breakLine: true } }, { text: c.sub, options: { fontSize: 9.5, color: K.muted } }], { x: px + 0.1, y: cy + 1.22, w: iw - 0.2, h: 0.51, valign: "middle", fit: "shrink" });
-      T("NODES NEEDED PER RESOURCE", { x: px, y: cy + 1.85, w: iw, h: 0.2, fontSize: 8.5, bold: true, color: K.muted, charSpacing: 1 });
-      const top = Math.max(1, ...c.need.map(r => r.v || 0));
-      c.need.forEach((r, j) => {
-        const y = cy + 2.1 + j * 0.27, bx = px + 0.75, bw = iw - 0.75 - 0.75;
-        T(r.l, { x: px, y, w: 0.7, h: 0.22, fontSize: 10, bold: r.d, color: K.text, valign: "middle" });
-        s.addShape(pptx.ShapeType.roundRect, { x: bx, y: y + 0.07, w: bw, h: 0.09, rectRadius: 0.04, fill: { color: K.soft }, line: { color: K.soft } });
-        if (r.v) s.addShape(pptx.ShapeType.roundRect, { x: bx, y: y + 0.07, w: Math.max(0.04, bw * r.v / top), h: 0.09, rectRadius: 0.04, fill: { color: r.d ? c.color : "C4C9D2" }, line: { color: r.d ? c.color : "C4C9D2" } });
-        T(r.v == null ? "–" : `${r.v} node${r.v === 1 ? "" : "s"}`, { x: px + iw - 0.72, y, w: 0.72, h: 0.22, fontSize: 10, bold: r.d, color: K.text, align: "right", valign: "middle" });
+      const x = M + i * (cw + gap), best = c.rank === 1;
+      s.addShape(pptx.ShapeType.rect, { x, y: cy, w: cw, h: ch, fill: { color: "FFFFFF" }, line: { color: best ? c.color : K.line, width: best ? 2 : 1 } });
+      s.addShape(pptx.ShapeType.rect, { x, y: cy, w: cw, h: 0.75, fill: { color: c.color }, line: { color: c.color } });
+      T(c.name, { x: x + 0.2, y: cy + 0.05, w: cw - 0.4, h: 0.65, fontSize: 14, bold: true, color: "FFFFFF", valign: "middle", fit: "shrink" });
+      if (best) {
+        s.addShape(pptx.ShapeType.rect, { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fill: { color: K.good }, line: { color: K.good } });
+        T("LOWEST COST", { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle", charSpacing: 1 });
+      }
+      c.rows.forEach(([l, v], k) => {
+        const y = cy + 0.95 + k * 0.78;
+        T([{ text: l.toUpperCase(), options: { fontSize: 9, bold: true, color: K.muted, charSpacing: 1, breakLine: true } }, { text: v, options: { fontSize: 13, bold: k === 0, color: K.text } }],
+          { x: x + 0.2, y, w: cw - 0.4, h: 0.72, valign: "top", fit: "shrink" });
       });
-      T(c.calc, { x: px, y: cy + 2.95, w: iw, h: 0.26, fontSize: 9, color: K.muted, fit: "shrink" });
-      if (c.storage) T(c.storage, { x: px, y: cy + 3.2, w: iw, h: 0.62, fontSize: 9, color: c.minWarn ? K.warn : K.text, fit: "shrink", valign: "top" });
-      // specs and costs
-      const sy = cy + ch - 0.95, third = iw / 3;
-      s.addShape(pptx.ShapeType.line, { x: px, y: sy - 0.06, w: iw, h: 0, line: { color: K.line, width: 0.75 } });
-      [c.specs, c.costs].forEach((row, k) => row.forEach(([l, v], j) =>
-        T([{ text: l, options: { fontSize: 8.5, color: K.muted, breakLine: true } }, { text: v, options: { fontSize: 11, bold: true, color: K.text } }],
-          { x: px + j * third, y: sy + k * 0.46, w: third, h: 0.42, fit: "shrink" })));
+      const fy = cy + ch - 1.35;
+      s.addShape(pptx.ShapeType.rect, { x: x + 0.01, y: fy, w: cw - 0.02, h: 1.34, fill: { color: best ? "FBEAE7" : K.soft }, line: { color: best ? "FBEAE7" : K.soft } });
+      T([{ text: c.price, options: { fontSize: 26, bold: true, color: K.text } }, { text: " per month", options: { fontSize: 11, color: K.muted, breakLine: true } },
+         { text: c.term, options: { fontSize: 12, color: K.text, breakLine: true } },
+         { text: c.delta, options: { fontSize: 11, bold: true, color: c.deltaColor } }], { x: x + 0.2, y: fy + 0.08, w: cw - 0.4, h: 1.2, valign: "middle" });
     });
+    T(m.notes2.join("   "), { x: M, y: H - 0.55, w: W - 2 * M, h: 0.45, fontSize: 9, color: K.muted, valign: "top", fit: "shrink" });
   }
 
   function buildCards(m) {
@@ -197,7 +213,8 @@
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing";
-    slideCards(pptx, m);
+    slideSummary(pptx, m);
+    slideSolutions(pptx, m);
     slideSources(pptx, m);
     return pptx;
   }
