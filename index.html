@@ -301,11 +301,11 @@ table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
       <div class="fgrid">
         <div class="field"><label>vCPU per physical core</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
         <div class="field"><label>RAM overcommit (1 = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
-        <div class="field"><label>Growth buffer %</label><input type="number" id="aGrowth" value="20" min="0"></div>
-        <div class="field"><label>Host RAM reserved %</label><input type="number" id="aRamRes" value="10" min="0" max="50"></div>
-        <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="1">N+1</option><option value="2">N+2</option><option value="0">None</option></select></div>
+        <div class="field"><label>Growth buffer %</label><input type="number" id="aGrowth" value="0" min="0"></div>
+        <div class="field"><label>Host RAM reserved %</label><input type="number" id="aRamRes" value="0" min="0" max="50"></div>
+        <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="0">None</option><option value="1">N+1</option><option value="2">N+2</option></select></div>
         <div class="field"><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33×)</option><option value="r1">RAID-1 FTT=1 (2×)</option><option value="r6">RAID-6 FTT=2 (1.5×)</option></select></div>
-        <div class="field"><label>Free-space headroom %</label><input type="number" id="aSlack" value="25" min="0" max="50"></div>
+        <div class="field"><label>Free-space headroom %</label><input type="number" id="aSlack" value="0" min="0" max="50"></div>
         <div class="field"><label>vSAN dedup/compression</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. HA spares add compute only. Headroom is kept free on vSAN and on external datastores.</p>
@@ -378,10 +378,10 @@ function storageCost(ch, tb, hours){
 }
 
 // ---------- settings ----------
-const DEF = {term:"3yr",hours:"744",evsBasis:"instance",aRatio:"4",aRamOc:"1",aGrowth:"20",aRamRes:"10",aHa:"1",aPol:"r5",aSlack:"25",aDedup:"1"};
+const DEF = {term:"3yr",hours:"744",evsBasis:"instance",aRatio:"4",aRamOc:"1",aGrowth:"0",aRamRes:"0",aHa:"0",aPol:"r5",aSlack:"0",aDedup:"1"};
 const PKEYS = ["term","hours","evsBasis"], AKEYS = ["aRatio","aRamOc","aGrowth","aRamRes","aHa","aPol","aSlack","aDedup"];
 const LBL = {term:v=>({"3yr":"3-yr","1yr":"1-yr",od:"On-demand"}[v]),hours:v=>v+" h/mo",evsBasis:v=>v==="host"?"EVS Dedicated Host":"EVS instance",
-  aRatio:v=>v+":1 vCPU/core",aRamOc:v=>v==="1"?"no RAM overcommit":v+"× RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
+  aRatio:v=>v+":1 vCPU/core",aRamOc:v=>v==="1"?"1:1 RAM":v+"× RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
   aHa:v=>v==="0"?"no HA spare":"N+"+v,aPol:v=>POL[v].l,aSlack:v=>v+"% free space",aDedup:v=>v==="1"?"no dedup":v+"× dedup"};
 const changed = k => String($(k).value) !== DEF[k];
 
@@ -439,8 +439,8 @@ function summaries(){
   const hours = +$("hours").value || 744;
   ORDER.forEach(p => $("sd_"+p).innerHTML = storageDetails(p, hours, $("term").value));
   $("defs").innerHTML = $("adv").checked ? "Change any setting below; changed values are highlighted."
-    : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>cheapest additional storage</b> (e.g. OCI Block Volume Balanced 10 VPU) when it lowers cost · 4:1 vCPU/core · +20% growth · N+1 · RAID-5 · 25% free space`;
-  $("sumA").innerHTML = sum(["aRatio","aGrowth","aHa","aPol","aSlack"]).join(" · ") + (["aRamOc","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
+    : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>cheapest additional storage</b> (e.g. OCI Block Volume Balanced 10 VPU) when it lowers cost · <b>4:1 vCPU/core</b> · <b>1:1 RAM</b> · RAID-5 · no growth, HA spare or free-space buffer`;
+  $("sumA").innerHTML = sum(["aRatio","aRamOc","aPol"]).join(" · ") + (["aGrowth","aHa","aSlack","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
   [...PKEYS, ...AKEYS].forEach(k => $(k).closest(".field").classList.toggle("chg", changed(k)));
   ORDER.forEach(p => $("f_reg_"+p).classList.toggle("chg", $("reg_"+p).value !== P.providers[p].defaultRegion));
 }
@@ -631,9 +631,9 @@ function render(){
   const ranked = ORDER.filter(p => shown[p]).sort((x,y) => shown[x].plan.total - shown[y].plan.total);
   const rpc = req.cpu ? req.ram/req.cpu : 0, spc = req.cpu ? req.sto*1000/req.cpu : 0;
   const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
-  const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis").map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
+  const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
 
-  let h = `<div class="sec"><div><h2>Your requirement</h2><p>After ${$("aGrowth").value}% growth. Highlighted assumptions differ from the defaults.</p></div></div>
+  let h = `<div class="sec"><div><h2>Your requirement</h2><p>${+$("aGrowth").value ? `After ${$("aGrowth").value}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span><span class="pill"><b>${profile}</b> · ${rpc.toFixed(1)} GB RAM per vCPU</span></div>
    <div class="req" style="margin-top:8px">${used}</div>`;
 
@@ -743,7 +743,7 @@ function deckModel(){
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
-    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage (after ${$("aGrowth").value}% growth) · ${T.label} · ${hours} h/month · BYOL`,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage ${+$("aGrowth").value ? `(after ${$("aGrowth").value}% growth) ` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [

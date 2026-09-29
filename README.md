@@ -21,7 +21,7 @@ Prices come live from two companion tools, so updating them there updates this t
 
 ## Simple by default, advanced when you need it
 
-Out of the box the tool uses the basics: **3-year commitment with monthly payments, 744 hours per month, Frankfurt**, and the **cheapest additional storage** on each cloud that suits running VMs, used only when it costs less than adding vSAN hosts:
+Out of the box the tool uses the basics: **3-year commitment with monthly payments, 744 hours per month, Frankfurt, 4:1 vCPU per core, 1:1 RAM, vSAN RAID-5**, with no growth buffer, HA spare host, free-space headroom or RAM reservation, and the **cheapest additional storage** on each cloud that suits running VMs, used only when it costs less than adding vSAN hosts:
 
 | Cloud | Default additional storage (Frankfurt) |
 |---|---|
