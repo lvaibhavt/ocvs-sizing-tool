@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VMware Cloud Sizer</title>
 <meta name="description" content="Size and price a VMware workload on Oracle Cloud VMware Solution, Azure VMware Solution, Google Cloud VMware Engine and Amazon Elastic VMware Service.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Shared price data: node prices from vmware-cloud-pricing-compare, storage prices from ocvs-external-storage-pricing -->
+<!-- Shared price data: host prices from vmware-cloud-pricing-compare, storage prices from ocvs-external-storage-pricing -->
 <script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/regional-prices.js"></script>
 <script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/pricing.js"></script>
 <script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/js/calc.js"></script>
@@ -14,161 +16,226 @@
 <script src="https://lvaibhavt.github.io/ocvs-external-storage-pricing/data/regions.js"></script>
 <style>
 :root{
-  --bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#5d6670;--line:#dde1e6;
-  --accent:#c74634;--accent-soft:#fbeae7;--ok:#1f7a4d;--bad:#b42318;--warn:#9a6700;--chip:#eef1f4;
+  --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
+  --hero1:#1d1f27;--hero2:#3a1e1a;--heroText:#fff;
+  --ocvs:#c74634;--avs:#0078d4;--gcve:#188038;--evs:#e88a00;
+  --good:#15803d;--bad:#c2410c;--chg:#b45309;--chgbg:#fef3c7;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.06);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111418;--card:#1a1e24;--text:#e6e9ed;--muted:#9aa4ae;--line:#2c323a;
-  --accent:#ef6f5c;--accent-soft:#3a201c;--ok:#4cc38a;--bad:#f97066;--warn:#e3b341;--chip:#252b33;}}
+  --bg:#0e1014;--card:#171a20;--text:#e8eaee;--muted:#98a1ae;--line:#2a2f37;--soft:#1e2229;
+  --hero1:#15161c;--hero2:#3b1a15;--ocvs:#f0715e;--avs:#4aa3ff;--gcve:#4cc36f;--evs:#ffab3d;
+  --good:#4ade80;--bad:#fb923c;--chg:#fbbf24;--chgbg:#3b2f12;--shadow:none;}}
 :root[data-theme="dark"]{
-  --bg:#111418;--card:#1a1e24;--text:#e6e9ed;--muted:#9aa4ae;--line:#2c323a;
-  --accent:#ef6f5c;--accent-soft:#3a201c;--ok:#4cc38a;--bad:#f97066;--warn:#e3b341;--chip:#252b33;}
+  --bg:#0e1014;--card:#171a20;--text:#e8eaee;--muted:#98a1ae;--line:#2a2f37;--soft:#1e2229;
+  --hero1:#15161c;--hero2:#3b1a15;--ocvs:#f0715e;--avs:#4aa3ff;--gcve:#4cc36f;--evs:#ffab3d;
+  --good:#4ade80;--bad:#fb923c;--chg:#fbbf24;--chgbg:#3b2f12;--shadow:none;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1160px;margin:0 auto;padding:24px 16px 64px}
-h1{font-size:26px;margin:0 0 4px}
-h2{font-size:18px;margin:0 0 12px}
-p.sub{color:var(--muted);margin:0 0 24px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
-.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.tab{flex:1;min-width:220px;border:2px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:14px;text-align:left;cursor:pointer;font:inherit}
-.tab b{display:block;font-size:15px}
-.tab span{color:var(--muted);font-size:13px}
-.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
-.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
-.pgrid fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0;min-width:0}
-.pgrid legend{font-weight:600;font-size:14px;padding:0 4px}
-.pgrid label{margin-top:6px}
-label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
-.drop{border:2px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted);cursor:pointer}
-.drop.hover{border-color:var(--accent)}
-button.go{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:11px 22px;font:inherit;font-weight:600;cursor:pointer}
-details summary{cursor:pointer;font-weight:600}
-.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-.stat{background:var(--chip);border-radius:8px;padding:8px 12px;font-size:13px}
-.stat b{font-size:16px;display:block}
-.prov{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
-.pc{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--card)}
-.pc.base{border:2px solid var(--accent)}
-.pc .shape{font-size:19px;font-weight:700;margin:6px 0 2px}
-.pc .nodes{font-size:14px;color:var(--muted)}
-.pc .price{font-size:26px;font-weight:700;margin:10px 0 0;font-variant-numeric:tabular-nums}
-.pc .price small{font-size:13px;font-weight:400;color:var(--muted)}
-.pc dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:12px 0 0;font-size:13px}
-.pc dt{color:var(--muted)} .pc dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
-.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
-.badge.drv{background:var(--accent-soft);color:var(--accent)}
-.up{color:var(--bad)} .down{color:var(--ok)}
-.ext{margin-top:12px;padding:10px;border-radius:8px;background:var(--chip);font-size:13px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:left}
-tr.best td{font-weight:600;background:var(--accent-soft)}
-td.na{color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+a{color:inherit}
+.hero{background:linear-gradient(120deg,var(--hero1) 0%,var(--hero1) 45%,var(--hero2) 100%);color:var(--heroText);padding:40px 16px 88px}
+.hero .in{max-width:1180px;margin:0 auto}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;font-weight:600}
+.hero h1{font-size:clamp(28px,4vw,40px);line-height:1.1;margin:8px 0 10px;font-weight:800;letter-spacing:-.02em}
+.hero p{max-width:640px;opacity:.8;margin:0 0 18px}
+.clouds{display:flex;gap:8px;flex-wrap:wrap}
+.cl{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.main{max-width:1180px;margin:-60px auto 0;padding:0 16px 64px;position:relative}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+.seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;padding:9px 16px;border-radius:9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:18px}
+.tile{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--soft)}
+.tile label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tile .row{display:flex;align-items:baseline;gap:6px;margin-top:4px}
+.tile input{border:0;background:transparent;color:var(--text);font:inherit;font-size:30px;font-weight:700;width:100%;padding:0;outline:none;min-width:0}
+.tile .u{color:var(--muted);font-weight:600}
+.ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--card);border:1px solid var(--line)}
+.drop{margin-top:18px;border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+.drop:hover,.drop.hover{border-color:var(--ocvs);background:var(--soft)}
+.drop b{color:var(--text)}
+.rvopts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+select,.field input{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);font:inherit;min-width:0}
+.toggles{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.tg{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-size:13px;padding:8px 12px;border-radius:99px;cursor:pointer;text-align:left}
+.tg[aria-expanded="true"]{border-color:var(--text)}
+.tg .k{font-weight:700}
+.tg .v{color:var(--muted)}
+.tg .v i{font-style:normal;color:var(--chg);font-weight:600}
+.tg .chev{transition:.2s;color:var(--muted)}
+.tg[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.drawer{margin-top:14px;padding:16px;border-radius:14px;background:var(--soft);border:1px solid var(--line)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.field label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
+.field select,.field input{width:100%}
+.field.chg label::after{content:" · changed";color:var(--chg)}
+.field.chg select,.field.chg input{border-color:var(--chg);background:var(--chgbg)}
+.dhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.dhead b{font-size:14px}
+.link{background:none;border:0;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:0}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px}
+.pbox{border-left:3px solid;padding:4px 0 4px 12px}
+.pbox .field{margin-top:6px}
+.sec{margin:34px 0 14px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.sec h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.sec p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.req{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-size:12.5px;padding:5px 10px;border-radius:99px;background:var(--card);border:1px solid var(--line)}
+.pill b{font-weight:700}
+.pill.chg{background:var(--chgbg);border-color:var(--chg);color:var(--chg)}
+.winner{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.winner::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--wc)}
+.winner .t{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.winner .h{font-size:clamp(20px,2.6vw,28px);font-weight:800;letter-spacing:-.02em;margin:4px 0}
+.winner .s{color:var(--muted)}
+.winner .big{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.03em;text-align:right;line-height:1}
+.winner .big small{display:block;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:6px}
+.bars{margin-top:16px;display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:130px 1fr 110px;gap:10px;align-items:center;font-size:13px}
+.bar .tr{height:12px;border-radius:99px;background:var(--soft);overflow:hidden}
+.bar .fl{height:100%;border-radius:99px}
+.bar .val{text-align:right;font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:16px;margin-top:16px}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.pc .top{padding:16px 18px 14px;border-top:4px solid var(--c)}
+.pc .nm{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700}
+.rank{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.rank.r1{background:var(--good);color:#fff}
+.pc .price{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:10px;line-height:1}
+.pc .price small{font-size:13px;font-weight:500;color:var(--muted)}
+.pc .delta{font-size:12.5px;font-weight:600;margin-top:6px}
+.up{color:var(--bad)} .down{color:var(--good)}
+.pc .shape{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--soft);font-size:13px}
+.pc .shape b{display:block;font-size:15px}
+.pc .shape .pin{color:var(--chg);font-weight:600}
+.need{padding:4px 18px 14px}
+.need h4{margin:10px 0 8px;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.nr{display:grid;grid-template-columns:62px 1fr 58px;gap:8px;align-items:center;font-size:13px;margin-bottom:6px}
+.nr .tr{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.nr .fl{height:100%;background:var(--muted);opacity:.45;border-radius:99px}
+.nr.drv .fl{background:var(--c);opacity:1}
+.nr.drv{font-weight:700}
+.nr .n{text-align:right}
+.calc{font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
+.calc b{color:var(--text)}
+.ext{margin:0 18px 12px;font-size:12.5px;padding:9px 11px;border-radius:10px;border:1px solid var(--line)}
+.specs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin-top:auto}
+.specs div{padding:10px 12px;font-size:12px;color:var(--muted)}
+.specs div+div{border-left:1px solid var(--line)}
+.specs b{display:block;font-size:14px;color:var(--text)}
+.drill{border:0;border-top:1px solid var(--line);background:none;color:var(--text);font:inherit;font-weight:600;font-size:13px;padding:11px;cursor:pointer;width:100%}
+.drill:hover{background:var(--soft)}
+.dt{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.dt .hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:4px solid var(--c);gap:10px;flex-wrap:wrap}
+.dt .hd b{font-size:15px}
 .tbl{overflow-x:auto}
-.note{font-size:12px;color:var(--muted)}
-.warn{color:var(--warn)}
-.hidden{display:none}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;background:var(--soft)}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--soft)}
+tr.sel td{background:var(--soft);box-shadow:inset 0 0 0 0 transparent}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--c)}
+td.d{font-weight:800;color:var(--c)}
+td.na{color:var(--muted);text-align:left}
+.tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--good);color:#fff;margin-left:6px}
+.tag.o{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.foot{margin-top:28px;font-size:12px;color:var(--muted);line-height:1.6}
+.hidden{display:none!important}
+@media (max-width:640px){.winner{grid-template-columns:1fr}.winner .big{text-align:left}.bar{grid-template-columns:90px 1fr 90px}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>VMware Cloud Sizer</h1>
-  <p class="sub">Size a VMware workload and price it on Oracle Cloud VMware Solution, Azure VMware Solution, Google Cloud VMware Engine and Amazon Elastic VMware Service. Every host shape is sized, priced with and without external storage, and the cheapest one on each cloud is recommended.</p>
+<header class="hero"><div class="in">
+  <div class="eyebrow">VMware on hyperscalers · sizing &amp; pricing</div>
+  <h1>Which cloud runs your VMware estate for less?</h1>
+  <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
+  <div class="clouds" id="clouds"></div>
+</div></header>
 
-  <div class="card">
-    <h2>1. Your workload</h2>
-    <div class="tabs" role="tablist">
-      <button class="tab" role="tab" id="tRv" aria-selected="true"><b>I have an RVTools report</b><span>Upload the .xlsx export and we'll read the vInfo sheet</span></button>
-      <button class="tab" role="tab" id="tMan" aria-selected="false"><b>Enter numbers manually</b><span>Total vCPU, RAM and storage</span></button>
+<main class="main">
+  <section class="panel">
+    <div class="seg" role="group" aria-label="Input method">
+      <button id="bMan" aria-pressed="true">Enter numbers</button>
+      <button id="bRv" aria-pressed="false">Upload RVTools</button>
     </div>
 
-    <div id="pRv">
-      <div class="drop" id="drop">Drop an RVTools .xlsx file here or <u>click to browse</u><input type="file" id="file" accept=".xlsx,.xls" hidden></div>
-      <div class="grid" style="margin-top:14px">
-        <div><label>VMs to include</label><select id="rvPower"><option value="on">Powered-on only</option><option value="all">All VMs (excluding templates)</option></select></div>
-        <div><label>Storage basis</label><select id="rvStor"><option value="inuse">In Use (consumed)</option><option value="prov">Provisioned</option></select></div>
+    <div id="pMan" class="inputs">
+      <div class="tile"><label><span class="ico">⚙</span>vCPU</label><div class="row"><input type="number" id="mCpu" value="800" min="0" class="num"><span class="u">vCPU</span></div></div>
+      <div class="tile"><label><span class="ico">▦</span>Memory</label><div class="row"><input type="number" id="mRam" value="4096" min="0" class="num"><span class="u">GB</span></div></div>
+      <div class="tile"><label><span class="ico">⛁</span>Storage used</label><div class="row"><input type="number" id="mSto" value="60" min="0" step="0.1" class="num"><span class="u">TB</span></div></div>
+    </div>
+
+    <div id="pRv" class="hidden">
+      <div class="drop" id="drop"><b>Drop your RVTools .xlsx here</b> or click to browse<br><span style="font-size:12.5px">Read in your browser from the vInfo sheet. Nothing is uploaded.</span><input type="file" id="file" accept=".xlsx,.xls" hidden></div>
+      <div class="rvopts">
+        <select id="rvPower"><option value="on">Powered-on VMs only</option><option value="all">All VMs (no templates)</option></select>
+        <select id="rvStor"><option value="inuse">Storage: In Use</option><option value="prov">Storage: Provisioned</option></select>
+        <span id="rvInfo" style="font-size:13px"></span>
       </div>
-      <div id="rvInfo" class="stats"></div>
-      <p class="note">Your file is read in your browser and isn't uploaded anywhere.</p>
     </div>
 
-    <div id="pMan" class="hidden">
-      <div class="grid">
-        <div><label>Total vCPU</label><input type="number" id="mCpu" value="800" min="0"></div>
-        <div><label>Total RAM (GB)</label><input type="number" id="mRam" value="4096" min="0"></div>
-        <div><label>Total storage (TB, used)</label><input type="number" id="mSto" value="60" min="0" step="0.1"></div>
+    <div class="toggles">
+      <button class="tg" id="tgP" aria-expanded="false"><span class="k">Pricing</span><span class="v" id="sumP"></span><span class="chev">▾</span></button>
+      <button class="tg" id="tgA" aria-expanded="false"><span class="k">Sizing assumptions</span><span class="v" id="sumA"></span><span class="chev">▾</span></button>
+    </div>
+
+    <div class="drawer hidden" id="dP">
+      <div class="dhead"><b>Pricing</b><button class="link" data-reset="p">Reset to defaults</button></div>
+      <div class="fgrid">
+        <div class="field"><label>Commitment</label><select id="term"><option value="3yr">3-year, monthly payments</option><option value="1yr">1-year, monthly payments</option><option value="od">On-demand</option></select></div>
+        <div class="field"><label>Hours per month</label><input type="number" id="hours" value="744" min="672" max="744"></div>
+        <div class="field"><label>Amazon EVS EC2 basis</label><select id="evsBasis"><option value="instance">Standard instance</option><option value="host">Dedicated Host</option></select></div>
       </div>
+      <div class="pgrid" id="provSel"></div>
     </div>
-  </div>
 
-  <div class="card">
-    <h2>2. Pricing</h2>
-    <div class="grid">
-      <div><label>Commitment</label><select id="term"><option value="3yr">3-year, monthly payments</option><option value="1yr">1-year, monthly payments</option><option value="od">On-demand</option></select></div>
-      <div><label>Hours per month</label><input type="number" id="hours" value="744" min="672" max="744"></div>
-      <div><label>Amazon EVS EC2 basis</label><select id="evsBasis"><option value="instance">Standard instance (default EVS)</option><option value="host">Dedicated Host</option></select></div>
-    </div>
-    <div class="pgrid" id="provSel"></div>
-    <p class="note">The external storage is what gets added when hosts are sized for compute and the rest of the storage goes outside vSAN. It's billed pay-as-you-go: commitments apply to hosts only.</p>
-  </div>
-
-  <div class="card">
-    <details>
-      <summary>3. Sizing assumptions (optional)</summary>
-      <div class="grid" style="margin-top:14px">
-        <div><label>vCPU : physical core ratio</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
-        <div><label>RAM overcommit (1 = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
-        <div><label>Growth buffer %</label><input type="number" id="aGrowth" value="20" min="0"></div>
-        <div><label>Host RAM reserved for ESXi/vSAN %</label><input type="number" id="aRamRes" value="10" min="0" max="50"></div>
-        <div><label>HA spare host</label><select id="aHa"><option value="1">N+1</option><option value="2">N+2</option><option value="0">None</option></select></div>
-        <div><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33x), needs 4 or more hosts</option><option value="r1">RAID-1 FTT=1 (2x)</option><option value="r6">RAID-6 FTT=2 (1.5x), needs 6 or more hosts</option></select></div>
-        <div><label>Free-space headroom %</label><input type="number" id="aSlack" value="25" min="0" max="50"></div>
-        <div><label>vSAN dedup/compression ratio</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
+    <div class="drawer hidden" id="dA">
+      <div class="dhead"><b>Sizing assumptions</b><button class="link" data-reset="a">Reset to defaults</button></div>
+      <div class="fgrid">
+        <div class="field"><label>vCPU per physical core</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
+        <div class="field"><label>RAM overcommit (1 = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
+        <div class="field"><label>Growth buffer %</label><input type="number" id="aGrowth" value="20" min="0"></div>
+        <div class="field"><label>Host RAM reserved %</label><input type="number" id="aRamRes" value="10" min="0" max="50"></div>
+        <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="1">N+1</option><option value="2">N+2</option><option value="0">None</option></select></div>
+        <div class="field"><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33×)</option><option value="r1">RAID-1 FTT=1 (2×)</option><option value="r6">RAID-6 FTT=2 (1.5×)</option></select></div>
+        <div class="field"><label>Free-space headroom %</label><input type="number" id="aSlack" value="25" min="0" max="50"></div>
+        <div class="field"><label>vSAN dedup/compression</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
       </div>
-      <p class="note">If a cluster is too small for the chosen policy, the tool falls back to RAID-1. HA spare hosts count toward compute capacity only. The free-space headroom is kept on both vSAN and external datastores.</p>
-    </details>
-  </div>
-
-  <p><button class="go" id="run">Size and price it</button></p>
-
-  <div id="out" class="hidden">
-    <div class="card">
-      <h2>Requirement after growth and assumptions</h2>
-      <div class="stats" id="reqStats"></div>
+      <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. HA spares add compute only. Headroom is kept free on vSAN and on external datastores.</p>
     </div>
-    <h2>Cheapest fit on each cloud</h2>
-    <p class="note" id="basisNote"></p>
-    <div class="prov" id="recs"></div>
-    <div class="card" style="margin-top:20px">
-      <h2>All shapes compared</h2>
-      <p class="note">Each shape uses its cheaper plan: all storage on vSAN, or hosts sized for compute plus external storage. Shapes without a published price for this region and commitment show n/a.</p>
-      <div class="tbl"><table id="all"></table></div>
-    </div>
-  </div>
+  </section>
 
-  <p class="note" id="sources"></p>
-</div>
+  <div id="out"></div>
+
+  <p class="foot" id="sources"></p>
+</main>
 
 <script>
 const $ = id => document.getElementById(id);
 const ORDER = ["ocvs","avs","gcve","evs"];
+const COLOR = {ocvs:"var(--ocvs)",avs:"var(--avs)",gcve:"var(--gcve)",evs:"var(--evs)"};
 const POL = {r1:{f:2,min:3,l:"RAID-1"},r5:{f:4/3,min:4,l:"RAID-5"},r6:{f:1.5,min:6,l:"RAID-6"}};
 const P = window.PRICING, S = window.STORAGE, SR = window.STORAGE_REGIONS;
 const GIB_PER_TB = 1e12 / 2**30;
 const money = n => "$" + Math.round(n).toLocaleString();
+const kmoney = n => n >= 1e6 ? "$" + (n/1e6).toFixed(2) + "M" : money(n);
 const fmt = n => Math.round(n).toLocaleString();
 const num = s => parseFloat(String(s).replace(/,/g,""));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-// ---------- host shapes, taken from the node pricing tool ----------
+// ---------- host shapes, from the node pricing tool ----------
 const SHAPES = ORDER.flatMap(p => P.providers[p].shapes.filter(s => !s.gpu).map(s => ({
-  p, id: s.id, label: s.label || s.id, cores: s.cores, ram: num(s.memory),
-  raw: /vSAN/.test(s.storage) ? num(s.storage) : 0, min: P.providers[p].minNodes, note: s.note
+  p, id: s.id, label: (s.label || s.id).replace(" VCF BYOL",""), cores: s.cores, ram: num(s.memory),
+  raw: /vSAN/.test(s.storage) ? num(s.storage) : 0, min: P.providers[p].minNodes
 })));
 
-// ---------- external storage choices, taken from the storage pricing tool ----------
+// ---------- external storage, from the storage pricing tool ----------
 function storageChoices(p, region){
   const reg = (SR.platforms[p] || []).find(r => r.id === region);
   if (!reg) return [];
@@ -177,191 +244,263 @@ function storageChoices(p, region){
     if (o.platform !== p || o.kind === "vsan" || !(o.id in reg.avail)) continue;
     const ov = reg.avail[o.id] || {};
     for (const t of o.tiers || []) {
-      if (t.pool || /-add$/.test(t.id)) continue;             // cold tier / add-on capacity can't stand alone
+      if (t.pool || /-add$/.test(t.id)) continue;
       const hourly = t.priceHr != null;
       const price = typeof ov[t.id] === "number" ? ov[t.id] : (hourly ? t.priceHr : t.price);
-      if (typeof price !== "number") continue;               // partner products with no public price
+      if (typeof price !== "number") continue;
       out.push({key:o.id+"|"+t.id, name:o.name, tier:t.label, kind:o.kind, hourly, price,
-        def:!!t.default, minGiB:o.id === "elastic-san" ? 16*1024 : 0, opt:o});
+        minGiB:o.id === "elastic-san" ? 16*1024 : 0, opt:o});
     }
   }
-  // block first, then file; defaults first
-  return out.sort((a,b) => (a.kind === "block" ? 0 : 1) - (b.kind === "block" ? 0 : 1) || b.def - a.def);
+  return out.sort((a,b) => (a.kind === "block" ? 0 : 1) - (b.kind === "block" ? 0 : 1));
 }
 function storageCost(ch, tb, hours){
   if (!ch || tb <= 0) return 0;
-  const gib = Math.max(tb * GIB_PER_TB, ch.minGiB);
-  return gib * ch.price * (ch.hourly ? hours : 1);
+  return Math.max(tb * GIB_PER_TB, ch.minGiB) * ch.price * (ch.hourly ? hours : 1);
 }
 
-// ---------- provider selectors ----------
+// ---------- settings ----------
+const DEF = {term:"3yr",hours:"744",evsBasis:"instance",aRatio:"4",aRamOc:"1",aGrowth:"20",aRamRes:"10",aHa:"1",aPol:"r5",aSlack:"25",aDedup:"1"};
+const PKEYS = ["term","hours","evsBasis"], AKEYS = ["aRatio","aRamOc","aGrowth","aRamRes","aHa","aPol","aSlack","aDedup"];
+const LBL = {term:v=>({"3yr":"3-yr","1yr":"1-yr",od:"On-demand"}[v]),hours:v=>v+" h/mo",evsBasis:v=>v==="host"?"EVS Dedicated Host":"EVS instance",
+  aRatio:v=>v+":1 vCPU/core",aRamOc:v=>v==="1"?"no RAM overcommit":v+"× RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
+  aHa:v=>v==="0"?"no HA spare":"N+"+v,aPol:v=>POL[v].l,aSlack:v=>v+"% free space",aDedup:v=>v==="1"?"no dedup":v+"× dedup"};
+const changed = k => String($(k).value) !== DEF[k];
+
 function buildProvSel(){
   $("provSel").innerHTML = ORDER.map(p => {
     const pr = P.providers[p];
-    const regs = pr.regions.map(r => `<option value="${r.id}"${r.id === pr.defaultRegion ? " selected" : ""}>${r.name}</option>`).join("");
-    return `<fieldset><legend>${pr.longName}</legend>
-      <label>Region</label><select id="reg_${p}">${regs}</select>
-      <label>External storage</label><select id="st_${p}"></select></fieldset>`;
+    const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
+    return `<div class="pbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
+      <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div>
+      <div class="field" id="f_st_${p}"><label>External storage</label><select id="st_${p}"></select></div></div>`;
   }).join("");
-  ORDER.forEach(p => { $("reg_"+p).onchange = () => fillStorage(p); fillStorage(p); });
+  ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; fillStorage(p); });
 }
 function fillStorage(p){
   const list = storageChoices(p, $("reg_"+p).value);
   $("st_"+p).innerHTML = list.length
-    ? list.map(c => `<option value="${c.key}">${c.name} (${c.kind === "block" ? "block" : "NFS"}) · ${c.tier}</option>`).join("")
-    : `<option value="">None available in this region</option>`;
+    ? list.map(c => `<option value="${c.key}">${esc(c.name)} (${c.kind === "block" ? "block" : "NFS"}) · ${esc(c.tier)}</option>`).join("")
+    : `<option value="">None in this region</option>`;
 }
+function summaries(){
+  const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k]($(k).value)}</i>` : LBL[k]($(k).value));
+  const regChg = ORDER.filter(p => $("reg_"+p).value !== P.providers[p].defaultRegion).length;
+  $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt"].join(" · ");
+  $("sumA").innerHTML = sum(["aRatio","aGrowth","aHa","aPol","aSlack"]).join(" · ") + (["aRamOc","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
+  [...PKEYS, ...AKEYS].forEach(k => $(k).closest(".field").classList.toggle("chg", changed(k)));
+  ORDER.forEach(p => $("f_reg_"+p).classList.toggle("chg", $("reg_"+p).value !== P.providers[p].defaultRegion));
+}
+function toggle(btn, drawer){
+  btn.onclick = () => { const open = btn.getAttribute("aria-expanded") !== "true";
+    ["tgP","tgA"].forEach(id => $(id).setAttribute("aria-expanded","false")); $("dP").classList.add("hidden"); $("dA").classList.add("hidden");
+    if (open) { btn.setAttribute("aria-expanded","true"); $(drawer).classList.remove("hidden"); } };
+}
+toggle($("tgP"),"dP"); toggle($("tgA"),"dA");
+document.querySelectorAll("[data-reset]").forEach(b => b.onclick = () => {
+  const keys = b.dataset.reset === "p" ? PKEYS : AKEYS;
+  keys.forEach(k => $(k).value = DEF[k]);
+  if (b.dataset.reset === "p") ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); });
+  update();
+});
 
-// ---------- RVTools ----------
-let mode = "rv", rv = null;
-function setMode(m){mode=m;$("tRv").setAttribute("aria-selected",m==="rv");$("tMan").setAttribute("aria-selected",m==="man");
-  $("pRv").classList.toggle("hidden",m!=="rv");$("pMan").classList.toggle("hidden",m!=="man");}
-$("tRv").onclick=()=>setMode("rv");$("tMan").onclick=()=>setMode("man");
-const drop=$("drop");
-drop.onclick=()=>$("file").click();
-drop.ondragover=e=>{e.preventDefault();drop.classList.add("hover")};
-drop.ondragleave=()=>drop.classList.remove("hover");
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove("hover");if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
-$("file").onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
-$("rvPower").onchange=$("rvStor").onchange=()=>rv&&summariseRv();
+// ---------- input mode + RVTools ----------
+let mode = "man", rv = null;
+function setMode(m){ mode = m; $("bMan").setAttribute("aria-pressed", m==="man"); $("bRv").setAttribute("aria-pressed", m==="rv");
+  $("pMan").classList.toggle("hidden", m!=="man"); $("pRv").classList.toggle("hidden", m!=="rv"); update(); }
+$("bMan").onclick = () => setMode("man"); $("bRv").onclick = () => setMode("rv");
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("hover"); };
+drop.ondragleave = () => drop.classList.remove("hover");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("hover"); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+$("file").onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); };
+$("rvPower").onchange = $("rvStor").onchange = () => { if (rv) { summariseRv(); update(); } };
 
-function col(row,names){for(const n of names){for(const k in row){if(k.trim().toLowerCase()===n)return row[k]}}return undefined}
+function col(row,names){ for (const n of names) for (const k in row) if (k.trim().toLowerCase() === n) return row[k]; }
 function readFile(f){
-  const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const wb=XLSX.read(e.target.result,{type:"array"});
-      const sn=wb.SheetNames.find(s=>s.toLowerCase()==="vinfo")||wb.SheetNames.find(s=>/vinfo/i.test(s));
-      if(!sn)throw new Error("The file has no vInfo sheet. Is this an RVTools export?");
-      rv={name:f.name,rows:XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:""})};
-      summariseRv();
-    }catch(err){$("rvInfo").innerHTML=`<span class="warn">${err.message}</span>`;rv=null}
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:"array"});
+      const sn = wb.SheetNames.find(s => s.toLowerCase() === "vinfo") || wb.SheetNames.find(s => /vinfo/i.test(s));
+      if (!sn) throw new Error("No vInfo sheet found. Is this an RVTools export?");
+      rv = {name:f.name, rows:XLSX.utils.sheet_to_json(wb.Sheets[sn], {defval:""})};
+      summariseRv(); update();
+    } catch (err) { $("rvInfo").innerHTML = `<span style="color:var(--bad)">${esc(err.message)}</span>`; rv = null; update(); }
   };
   r.readAsArrayBuffer(f);
 }
 function summariseRv(){
-  const onlyOn=$("rvPower").value==="on",useProv=$("rvStor").value==="prov";
-  let vms=0,cpu=0,ramMiB=0,stoMiB=0;
-  for(const row of rv.rows){
-    if(!col(row,["vm"]))continue;
-    if(String(col(row,["template"])).toLowerCase()==="true")continue;
-    const pw=String(col(row,["powerstate"])||"").toLowerCase();
-    if(onlyOn&&pw&&pw!=="poweredon")continue;
+  const onlyOn = $("rvPower").value === "on", useProv = $("rvStor").value === "prov";
+  let vms = 0, cpu = 0, ramMiB = 0, stoMiB = 0;
+  for (const row of rv.rows) {
+    if (!col(row,["vm"])) continue;
+    if (String(col(row,["template"])).toLowerCase() === "true") continue;
+    const pw = String(col(row,["powerstate"]) || "").toLowerCase();
+    if (onlyOn && pw && pw !== "poweredon") continue;
     vms++;
-    cpu+=+col(row,["cpus"])||0;
-    ramMiB+=+col(row,["memory"])||0;
-    stoMiB+=+(useProv?col(row,["provisioned mib","provisioned mb"]):col(row,["in use mib","in use mb"]))||0;
+    cpu += +col(row,["cpus"]) || 0;
+    ramMiB += +col(row,["memory"]) || 0;
+    stoMiB += +(useProv ? col(row,["provisioned mib","provisioned mb"]) : col(row,["in use mib","in use mb"])) || 0;
   }
-  rv.cpu=cpu;rv.ram=ramMiB/1024;rv.sto=stoMiB*1.048576/1e6;
-  $("rvInfo").innerHTML=`<div class="stat">File<b>${rv.name}</b></div><div class="stat">VMs<b>${vms}</b></div>
-   <div class="stat">vCPU<b>${fmt(rv.cpu)}</b></div><div class="stat">RAM<b>${fmt(rv.ram)} GB</b></div><div class="stat">Storage<b>${rv.sto.toFixed(1)} TB</b></div>`;
+  Object.assign(rv, {vms, cpu, ram:ramMiB/1024, sto:stoMiB*1.048576/1e6});
+  $("rvInfo").innerHTML = `<b>${esc(rv.name)}</b> · ${vms} VMs · ${fmt(cpu)} vCPU · ${fmt(rv.ram)} GB · ${rv.sto.toFixed(1)} TB`;
 }
 
 // ---------- sizing ----------
-function vsanUsable(s,hosts,a){const pol=hosts>=POL[a.pol].min?POL[a.pol]:POL.r1;return{per:s.raw*(1-a.slack)/pol.f*a.dedup,pol:pol.l}}
+function vsanUsable(s,hosts,a){ const pol = hosts >= POL[a.pol].min ? POL[a.pol] : POL.r1; return {per:s.raw*(1-a.slack)/pol.f*a.dedup, pol:pol.l}; }
+// Nodes needed for each resource on its own, then the cheaper of two plans
 function size(s,req,a){
-  const cpuHosts=req.cpu/(s.cores*a.ratio);
-  const ramHosts=req.ram/(s.ram*(1-a.ramRes)*a.ramOc);
-  const compute=Math.max(Math.ceil(cpuHosts),Math.ceil(ramHosts),1)+a.ha;
-  const cDriver=cpuHosts>=ramHosts?"CPU":"RAM";
-  const plans=[];
-  // Plan A: everything on vSAN
-  if(s.raw){
-    let hosts=Math.max(compute,s.min),u;
-    for(let i=0;i<60;i++){u=vsanUsable(s,hosts,a);const need=Math.max(compute,s.min,Math.ceil(req.sto/u.per));if(need===hosts)break;hosts=need}
-    const stoHosts=Math.ceil(req.sto/u.per);
-    plans.push({kind:"vsan",hosts,usable:hosts*u.per,pol:u.pol,ext:0,
-      driver:stoHosts>=hosts&&stoHosts>compute?"Storage":(hosts>compute?"Minimum cluster":cDriver)});
+  const cpuN = Math.max(1, Math.ceil(req.cpu/(s.cores*a.ratio)));
+  const ramN = Math.max(1, Math.ceil(req.ram/(s.ram*(1-a.ramRes)*a.ramOc)));
+  const compute = Math.max(cpuN, ramN) + a.ha;
+  const need = {cpu:cpuN, ram:ramN, ha:a.ha, min:s.min, sto:null, compute};
+  const plans = [];
+  if (s.raw) {
+    let hosts = Math.max(compute, s.min), u;
+    for (let i = 0; i < 60; i++) { u = vsanUsable(s,hosts,a); const n = Math.max(compute, s.min, Math.ceil(req.sto/u.per)); if (n === hosts) break; hosts = n; }
+    need.sto = Math.ceil(req.sto/u.per); need.stoPol = u.pol; need.stoPer = u.per;
+    plans.push({kind:"vsan", hosts, usable:hosts*u.per, pol:u.pol, ext:0,
+      driver: need.sto >= hosts && need.sto > compute ? "Storage" : hosts > compute ? "Minimum" : (cpuN >= ramN ? "CPU" : "RAM")});
   }
-  // Plan B: hosts for compute, the rest on external storage
-  const hosts=Math.max(compute,s.min),u=s.raw?vsanUsable(s,hosts,a):{per:0,pol:"–"};
-  const deficit=Math.max(0,req.sto-hosts*u.per);
-  if(deficit>0)plans.push({kind:"ext",hosts,usable:hosts*u.per,pol:u.pol,ext:deficit/(1-a.slack),
-    driver:hosts>compute?"Minimum cluster":cDriver});
-  return plans;
+  const hosts = Math.max(compute, s.min), u = s.raw ? vsanUsable(s,hosts,a) : {per:0, pol:"–"};
+  const deficit = Math.max(0, req.sto - hosts*u.per);
+  if (deficit > 0) plans.push({kind:"ext", hosts, usable:hosts*u.per, pol:u.pol, ext:deficit/(1-a.slack),
+    driver: hosts > compute ? "Minimum" : (cpuN >= ramN ? "CPU" : "RAM")});
+  return {need, plans};
 }
 function priceShape(s,req,a,ctx){
-  const pc=ctx[s.p],rate=(pc.rates[s.id]||{})[ctx.term];
-  const plans=size(s,req,a);
-  if(typeof rate!=="number")return{s,na:"No price for this region and commitment",plan:plans[0]};
-  let best=null;
-  for(const pl of plans){
-    if(pl.kind==="ext"&&!pc.storage)continue;
-    pl.nodeCost=pl.hosts*rate*ctx.hours;
-    pl.stoCost=storageCost(pc.storage,pl.ext,ctx.hours);
-    pl.total=pl.nodeCost+pl.stoCost;
-    if(!best||pl.total<best.total)best=pl;
+  const pc = ctx[s.p], rate = (pc.rates[s.id] || {})[ctx.term];
+  const {need, plans} = size(s,req,a);
+  if (typeof rate !== "number") return {s, need, plan:plans[0], na:"No price in this region / term"};
+  let best = null;
+  for (const pl of plans) {
+    if (pl.kind === "ext" && !pc.storage) continue;
+    pl.nodeCost = pl.hosts*rate*ctx.hours;
+    pl.stoCost = storageCost(pc.storage, pl.ext, ctx.hours);
+    pl.total = pl.nodeCost + pl.stoCost;
+    if (!best || pl.total < best.total) best = pl;
   }
-  if(!best)return{s,na:"Needs external storage, none available in this region",plan:plans[0]};
-  return{s,rate,plan:best};
+  if (!best) return {s, need, plan:plans[0], na:"Needs external storage; none in this region"};
+  return {s, need, rate, plan:best};
 }
+function assumptions(){ return {ratio:+$("aRatio").value||4, ramOc:+$("aRamOc").value||1, growth:(+$("aGrowth").value||0)/100,
+  ramRes:(+$("aRamRes").value||0)/100, ha:+$("aHa").value, pol:$("aPol").value, slack:Math.min(.9,(+$("aSlack").value||0)/100), dedup:+$("aDedup").value||1}; }
 
-function assumptions(){return{ratio:+$("aRatio").value||4,ramOc:+$("aRamOc").value||1,growth:(+$("aGrowth").value||0)/100,
-  ramRes:(+$("aRamRes").value||0)/100,ha:+$("aHa").value,pol:$("aPol").value,slack:Math.min(.9,(+$("aSlack").value||0)/100),dedup:+$("aDedup").value||1}}
-
-$("run").onclick=()=>{
+// ---------- render ----------
+const pick = {}; let openDrill = null, last = null;
+function update(){
+  summaries();
   let base;
-  if(mode==="rv"){if(!rv){alert("Upload an RVTools report first, or switch to manual entry.");return}base={cpu:rv.cpu,ram:rv.ram,sto:rv.sto}}
-  else base={cpu:+$("mCpu").value||0,ram:+$("mRam").value||0,sto:+$("mSto").value||0};
-  const a=assumptions(),g=1+a.growth;
-  const req={cpu:base.cpu*g,ram:base.ram*g,sto:base.sto*g};
-  const rpc=req.cpu?req.ram/req.cpu:0,spc=req.cpu?req.sto*1000/req.cpu:0;
-  const profile=spc>150?"Storage-heavy":rpc>8?"Memory-heavy":rpc<3?"CPU-heavy":"Balanced";
-  $("reqStats").innerHTML=`<div class="stat">vCPU<b>${fmt(req.cpu)}</b></div><div class="stat">RAM<b>${fmt(req.ram)} GB</b></div>
-   <div class="stat">Storage<b>${req.sto.toFixed(1)} TB</b></div><div class="stat">GB RAM per vCPU<b>${rpc.toFixed(1)}</b></div>
-   <div class="stat">GB storage per vCPU<b>${fmt(spc)}</b></div><div class="stat">Profile<b>${profile}</b></div>`;
-
-  const term=$("term").value,hours=+$("hours").value||744,evsBasis=$("evsBasis").value;
-  const ctx={term,hours};
-  for(const p of ORDER){
-    const region=$("reg_"+p).value,rates={};
-    for(const s of Calc.listShapes(P,p,region,{evsBasis}))rates[s.id]=s.rates;
-    const key=$("st_"+p).value;
-    ctx[p]={region,rates,storage:storageChoices(p,region).find(c=>c.key===key)||null};
+  if (mode === "rv") {
+    if (!rv) { $("out").innerHTML = `<div class="panel empty" style="margin-top:24px">Upload an RVTools report to see sizing and prices.</div>`; return; }
+    base = {cpu:rv.cpu, ram:rv.ram, sto:rv.sto};
+  } else base = {cpu:+$("mCpu").value||0, ram:+$("mRam").value||0, sto:+$("mSto").value||0};
+  const a = assumptions(), g = 1 + a.growth;
+  const req = {cpu:base.cpu*g, ram:base.ram*g, sto:base.sto*g};
+  const term = $("term").value, hours = +$("hours").value || 744, ctx = {term, hours};
+  for (const p of ORDER) {
+    const region = $("reg_"+p).value, rates = {};
+    for (const s of Calc.listShapes(P, p, region, {evsBasis:$("evsBasis").value})) rates[s.id] = s.rates;
+    const key = $("st_"+p).value;
+    ctx[p] = {region, rates, storage:storageChoices(p, region).find(c => c.key === key) || null};
   }
-  const results=SHAPES.map(s=>priceShape(s,req,a,ctx));
-  const best={};
-  for(const p of ORDER)best[p]=results.filter(r=>r.s.p===p&&!r.na).sort((x,y)=>x.plan.total-y.plan.total||x.plan.hosts-y.plan.hosts)[0];
-  const months=Calc.TERMS[term].months;
-  $("basisNote").textContent=`${Calc.TERMS[term].label}, ${hours} hours per month, BYOL (VMware Cloud Foundation licence not included). Term total covers ${months} months.`;
-
-  $("recs").innerHTML=ORDER.map(p=>card(p,best[p],best.ocvs,req,months,ctx)).join("");
-  let rows=`<tr><th>Cloud</th><th>Shape</th><th>Plan</th><th>Hosts</th><th>Driver</th><th>Cores</th><th>RAM (GB)</th><th>Usable vSAN (TB)</th><th>External (TB)</th><th>Hosts $/mo</th><th>Storage $/mo</th><th>Total $/mo</th></tr>`;
-  for(const p of ORDER){
-    const list=results.filter(r=>r.s.p===p).sort((x,y)=>(x.na?1:0)-(y.na?1:0)||(x.plan.total||0)-(y.plan.total||0));
-    for(const r of list){
-      const pl=r.plan,cls=r===best[p]?"best":"";
-      rows+=`<tr class="${cls}"><td>${P.providers[p].name}</td><td>${r.s.label}</td><td>${pl.kind==="vsan"?"vSAN only":"Compute + external"}</td><td>${pl.hosts}</td><td>${pl.driver}</td>
-        <td>${fmt(pl.hosts*r.s.cores)}</td><td>${fmt(pl.hosts*r.s.ram)}</td><td>${r.s.raw?pl.usable.toFixed(1):"–"}</td><td>${pl.ext?pl.ext.toFixed(1):"–"}</td>`+
-        (r.na?`<td class="na" colspan="3">n/a: ${r.na}</td>`:`<td>${money(pl.nodeCost)}</td><td>${pl.stoCost?money(pl.stoCost):"–"}</td><td>${money(pl.total)}</td>`)+`</tr>`;
-    }
+  const results = SHAPES.map(s => priceShape(s, req, a, ctx));
+  const by = {}, cheapest = {}, shown = {};
+  for (const p of ORDER) {
+    by[p] = results.filter(r => r.s.p === p).sort((x,y) => (x.na?1:0)-(y.na?1:0) || (x.plan.total||0)-(y.plan.total||0) || x.plan.hosts-y.plan.hosts);
+    cheapest[p] = by[p].find(r => !r.na);
+    shown[p] = by[p].find(r => r.s.id === pick[p] && !r.na) || cheapest[p];
   }
-  $("all").innerHTML=rows;
-  $("out").classList.remove("hidden");$("out").scrollIntoView({behavior:"smooth"});
-};
-
-function card(p,r,base,req,months,ctx){
-  const pr=P.providers[p];
-  if(!r)return `<div class="pc"><span class="badge">${pr.longName}</span><div class="shape">No priced shape</div><div class="nodes">Nothing has a published price in this region for this commitment.</div></div>`;
-  const pl=r.plan,s=r.s,vcpuCap=pl.hosts*s.cores*+$("aRatio").value,st=ctx[p].storage;
-  let diff="";
-  if(base&&p!=="ocvs"){const d=(pl.total-base.plan.total)/base.plan.total;diff=`<dt>vs OCVS</dt><dd class="${d>0?"up":"down"}">${d>0?"+":""}${(d*100).toFixed(0)}% (${d>0?"+":"−"}${money(Math.abs(pl.total-base.plan.total))}/mo)</dd>`}
-  const ext=pl.ext?`<div class="ext">Hosts are sized for compute. Add <b>${pl.ext.toFixed(1)} TB</b> on ${st.name} · ${st.tier}: <b>${money(pl.stoCost)}/mo</b>.${st.opt.id.startsWith("fsx")?" FSx throughput capacity isn't included.":""}</div>`:"";
-  return `<div class="pc${p==="ocvs"?" base":""}"><span class="badge">${pr.longName}</span> <span class="badge drv">${pl.driver}-driven</span>
-   <div class="shape">${s.label}</div><div class="nodes"><b>${pl.hosts} hosts</b> · ${ctx[p].region}</div>
-   <div class="price">${money(pl.total)}<small>/month</small></div>
-   <dl><dt>Hosts</dt><dd>${money(pl.nodeCost)}/mo (${money(r.rate*ctx.hours)} each)</dd>
-   ${pl.stoCost?`<dt>External storage</dt><dd>${money(pl.stoCost)}/mo</dd>`:""}
-   <dt>Annual</dt><dd>${money(pl.total*12)}</dd>
-   <dt>Term total</dt><dd>${money(pl.total*months)}</dd>${diff}
-   <dt>Physical cores</dt><dd>${fmt(pl.hosts*s.cores)} (${fmt(vcpuCap)} vCPU)</dd>
-   <dt>RAM</dt><dd>${fmt(pl.hosts*s.ram)} GB</dd>
-   <dt>Usable vSAN</dt><dd>${s.raw?pl.usable.toFixed(1)+" TB ("+pl.pol+")":"none (external only)"}</dd>
-   <dt>Need</dt><dd>${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB · ${req.sto.toFixed(1)} TB</dd></dl>${ext}</div>`;
+  last = {req, a, ctx, by, cheapest, shown, term, hours, base};
+  render();
 }
 
+function render(){
+  const {req, a, ctx, by, cheapest, shown, term, hours} = last;
+  const months = Calc.TERMS[term].months;
+  const ranked = ORDER.filter(p => shown[p]).sort((x,y) => shown[x].plan.total - shown[y].plan.total);
+  const rpc = req.cpu ? req.ram/req.cpu : 0, spc = req.cpu ? req.sto*1000/req.cpu : 0;
+  const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
+  const used = [...PKEYS, ...AKEYS].map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
+
+  let h = `<div class="sec"><div><h2>Your requirement</h2><p>After ${$("aGrowth").value}% growth. Highlighted assumptions differ from the defaults.</p></div></div>
+   <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span><span class="pill"><b>${profile}</b> · ${rpc.toFixed(1)} GB RAM per vCPU</span></div>
+   <div class="req" style="margin-top:8px">${used}</div>`;
+
+  if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
+  const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
+  const max = Math.max(...ranked.map(p => shown[p].plan.total));
+  h += `<div class="sec"><div><h2>Result</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div></div>
+   <div class="winner" style="--wc:${COLOR[w]}"><div>
+     <div class="t">Lowest cost</div>
+     <div class="h">${P.providers[w].longName}</div>
+     <div class="s">${wr.plan.hosts} × ${esc(wr.s.label)}${wr.plan.ext ? ` + ${wr.plan.ext.toFixed(0)} TB ${esc(ctx[w].storage.name)}` : ""}${second ? ` · <b class="down">${Math.round((1-wr.plan.total/second.plan.total)*100)}% less</b> than ${P.providers[ranked[1]].name}` : ""}</div>
+   </div><div class="big num">${money(wr.plan.total)}<small>per month · ${kmoney(wr.plan.total*months)} over ${months} months</small></div></div>
+   <div class="panel" style="margin-top:16px;padding:18px 20px"><div class="bars">${ranked.map(p => `<div class="bar"><span><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}</span>
+     <div class="tr"><div class="fl" style="width:${shown[p].plan.total/max*100}%;background:${COLOR[p]}"></div></div><span class="val num">${money(shown[p].plan.total)}/mo</span></div>`).join("")}</div></div>`;
+
+  h += `<div class="cards">` + ORDER.map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
+  if (openDrill) h += drill(openDrill);
+  $("out").innerHTML = h;
+  document.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => { openDrill = openDrill === b.dataset.drill ? null : b.dataset.drill; render();
+    if (openDrill) $("drill").scrollIntoView({behavior:"smooth", block:"start"}); });
+  document.querySelectorAll("[data-pick]").forEach(tr => tr.onclick = () => { const [p,id] = tr.dataset.pick.split("|"); pick[p] = id === cheapest[p].s.id ? undefined : id; update(); });
+  document.querySelectorAll("[data-unpin]").forEach(b => b.onclick = e => { e.stopPropagation(); pick[b.dataset.unpin] = undefined; update(); });
+}
+
+function needBars(r){
+  const n = r.need, pl = r.plan, top = Math.max(n.cpu, n.ram, n.sto || 0, pl.hosts);
+  const drv = pl.driver;
+  const row = (lbl, v, isD, note) => `<div class="nr${isD?" drv":""}"><span>${lbl}</span><div class="tr"><div class="fl" style="width:${v==null?0:v/top*100}%"></div></div><span class="n num">${v==null?"–":v+" node"+(v===1?"":"s")}</span></div>`;
+  let stoLbl = n.sto == null ? null : n.sto;
+  let calc = `max(CPU ${n.cpu}, RAM ${n.ram})${n.ha?` + ${n.ha} HA`:""} = <b>${n.compute}</b>`;
+  if (pl.kind === "vsan" && n.sto > n.compute) calc += ` · storage needs <b>${n.sto}</b>`;
+  if (n.min > Math.max(n.compute, pl.kind === "vsan" ? n.sto||0 : 0)) calc += ` · minimum <b>${n.min}</b>`;
+  calc += ` → <b>${pl.hosts} hosts</b>`;
+  return `<h4>Nodes needed per resource</h4>${row("CPU", n.cpu, drv==="CPU")}${row("RAM", n.ram, drv==="RAM")}${row("Storage", stoLbl, drv==="Storage")}
+    <div class="calc">${calc}${pl.kind === "ext" && n.sto != null ? `<br>Storage on vSAN alone would need ${n.sto} nodes. External storage is cheaper.` : ""}${n.sto == null ? "<br>No local vSAN: all storage is external." : ""}</div>`;
+}
+
+function card(p, rank, r, cheap, ocvs, months){
+  const pr = P.providers[p];
+  if (!r) return `<div class="pc" style="--c:${COLOR[p]}"><div class="top"><div class="nm">${pr.longName}</div><p style="color:var(--muted)">No priced shape for this region and commitment.</p></div></div>`;
+  const pl = r.plan, st = last.ctx[p].storage, pinned = r !== cheap;
+  let delta = "";
+  if (p !== "ocvs" && ocvs) { const d = pl.total - ocvs.plan.total; delta = `<div class="delta ${d>0?"up":"down"}">${d>0?"+":"−"}${money(Math.abs(d))}/mo (${d>0?"+":"−"}${Math.abs(Math.round(d/ocvs.plan.total*100))}%) vs OCVS</div>`; }
+  else if (p === "ocvs") delta = `<div class="delta" style="color:var(--muted)">Baseline</div>`;
+  return `<div class="pc" style="--c:${COLOR[p]}">
+   <div class="top"><div class="nm"><span><span class="dot" style="background:${COLOR[p]}"></span> ${pr.longName}</span><span class="rank${rank===0?" r1":""}">#${rank+1}</span></div>
+     <div class="price num">${money(pl.total)}<small>/mo</small></div>${delta}
+     <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(last.ctx[p].region)}`}</div></div>
+   <div class="need">${needBars(r)}</div>
+   ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}</div>` : ""}
+   <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
+   <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
+   <button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button></div>`;
+}
+
+function drill(p){
+  const pr = P.providers[p], rows = last.by[p], sel = last.shown[p], cheap = last.cheapest[p];
+  const cell = (v, d) => `<td class="num${d?" d":""}">${v==null?"–":v}</td>`;
+  return `<div class="dt" id="drill" style="--c:${COLOR[p]}"><div class="hd"><b>${pr.longName}: every shape</b><span style="font-size:12.5px;color:var(--muted)">Nodes per resource; the one that sets the host count is in colour. Click a row to use that shape.</span></div>
+  <div class="tbl"><table><thead><tr><th>Shape</th><th>Per host</th><th>CPU</th><th>RAM</th><th>Storage</th><th>+HA / min</th><th>Hosts</th><th>Plan</th><th>Hosts $/mo</th><th>Storage $/mo</th><th>Total $/mo</th></tr></thead><tbody>
+  ${rows.map(r => { const n = r.need, pl = r.plan, d = pl.driver;
+    return `<tr data-pick="${p}|${esc(r.s.id)}" class="${r===sel?"sel":""}"><td><b>${esc(r.s.label)}</b>${r===cheap?`<span class="tag">Cheapest</span>`:""}${r===sel&&r!==cheap?`<span class="tag o">Selected</span>`:""}</td>
+    <td class="num" style="color:var(--muted)">${r.s.cores}c · ${fmt(r.s.ram)} GB · ${r.s.raw?r.s.raw+" TB":"no vSAN"}</td>
+    ${cell(n.cpu, d==="CPU")}${cell(n.ram, d==="RAM")}${cell(n.sto, d==="Storage")}<td class="num">+${n.ha} / ${n.min}${d==="Minimum"?" ◂":""}</td>
+    <td class="num"><b>${pl.hosts}</b></td><td>${pl.kind==="vsan"?"vSAN":`+ ${pl.ext.toFixed(0)} TB ext.`}</td>
+    ${r.na ? `<td class="na" colspan="3">${r.na}</td>` : `<td class="num">${money(pl.nodeCost)}</td><td class="num">${pl.stoCost?money(pl.stoCost):"–"}</td><td class="num"><b>${money(pl.total)}</b></td>`}</tr>`; }).join("")}
+  </tbody></table></div></div>`;
+}
+
+// ---------- init ----------
+$("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
 buildProvSel();
-$("sources").innerHTML=`Host prices from <a href="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/">VMware Cloud Pricing Compare</a> (as of ${P.asOf}). Storage prices from <a href="https://lvaibhavt.github.io/ocvs-external-storage-pricing/">OCVS External Storage Pricing</a> (as of ${S.asOf}). Both are public list prices, BYOL, excluding VCF licences, networking, egress, backup, support and taxes. Indicative only, not a quote.`;
+[...PKEYS, ...AKEYS, "mCpu", "mRam", "mSto"].forEach(k => $(k).addEventListener("input", update));
+$("sources").innerHTML = `Host prices: <a href="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/">VMware Cloud Pricing Compare</a> (as of ${P.asOf}). Storage prices: <a href="https://lvaibhavt.github.io/ocvs-external-storage-pricing/">OCVS External Storage Pricing</a> (as of ${S.asOf}). Public list prices, BYOL. Excludes VCF licences, networking, egress, backup, support and taxes. External storage is pay-as-you-go. Indicative only, not a quote.`;
+update();
 </script>
 </body>
 </html>
