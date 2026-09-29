@@ -743,12 +743,12 @@ function deckModel(){
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
-    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage ${+$("aGrowth").value ? `(after ${$("aGrowth").value}% growth) ` : ""} · ${T.label} · ${hours} h/month · BYOL`,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+$("aGrowth").value ? ` (after ${$("aGrowth").value}% growth)` : ""} ·${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
       ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.`],
-      ["Sizing", `${$("aRatio").value}:1 vCPU per core · +${$("aGrowth").value}% growth · ${LBL.aHa($("aHa").value)} · ${POL[$("aPol").value].l} · ${$("aSlack").value}% free space · ${$("aRamRes").value}% host RAM reserved.`],
+      ["Sizing", [`${$("aRatio").value}:1 vCPU per core`, LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
     ],
