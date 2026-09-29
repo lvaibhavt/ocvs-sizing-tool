@@ -2,6 +2,10 @@
 
 ## ▶ Open the tool: **https://lvaibhavt.github.io/ocvs-sizing-tool/**
 
+Two layouts, same inputs and numbers (switch at the top of the page):
+- **View 1 · Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/
+- **View 2 · Table** (navy/gold comparison table, like VMware Cloud Pricing Compare): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2
+
 This tool sizes a VMware workload by host shape across four clouds:
 
 - **Oracle Cloud VMware Solution (OCVS)**
