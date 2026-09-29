@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="js/ppt.js"></script>
 <!-- Shared price data: host prices from vmware-cloud-pricing-compare, storage prices from ocvs-external-storage-pricing -->
 <script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/regional-prices.js"></script>
 <script src="https://lvaibhavt.github.io/vmware-cloud-pricing-compare/data/pricing.js"></script>
@@ -204,6 +206,34 @@ body.v2 .dt th{background:var(--navy);color:#fff}
   body.v2 .callout{background:#16301b;border-color:#24532c}
   body.v2 .callout span{color:#ddd}
   body.v2 .callout.neg{background:#3a1715;border-color:#6b2a25}}
+.advrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:14px}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .sl{width:40px;height:22px;border-radius:99px;background:var(--line);position:relative;transition:.2s;flex:none}
+.switch .sl::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:.2s}
+.switch input:checked + .sl{background:var(--ocvs)}
+.switch input:checked + .sl::after{left:21px}
+.switch input:focus-visible + .sl{outline:2px solid var(--text);outline-offset:2px}
+.defs{font-size:12.5px;color:var(--muted);flex:1;min-width:240px}
+.defs b{color:var(--text);font-weight:600}
+#advBox .toggles{margin-top:12px;padding-top:0;border-top:0}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:10px}
+.sbox{border-left:3px solid;padding:4px 0 4px 12px}
+.sdet{font-size:12.5px;margin-top:8px}
+.sdet dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}
+.sdet dt{color:var(--muted)} .sdet dd{margin:0}
+.sdet ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+.sdet p{margin:6px 0 0;color:var(--muted)}
+.sdet p.auto{color:var(--text);margin:0 0 6px}
+.sdet .lk a{color:var(--text)}
+.pptb{font:inherit;font-weight:700;font-size:13.5px;background:var(--text);color:var(--card);border:0;border-radius:9px;padding:9px 16px;cursor:pointer}
+.pptb:disabled{opacity:.6;cursor:wait}
+body.v2 .pptb{background:var(--navy);color:var(--gold);border-radius:6px}
+table.fit{table-layout:auto}
+table.fit th,table.fit td{white-space:normal;padding:8px 8px}
+table.fit th{font-size:10.5px;vertical-align:bottom}
+table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
+.dt{overflow:visible}
 </style>
 </head>
 <body>
@@ -237,19 +267,32 @@ body.v2 .dt th{background:var(--navy);color:#fff}
       </div>
     </div>
 
+    <div class="advrow">
+      <label class="switch"><input type="checkbox" id="adv"><span class="sl" aria-hidden="true"></span><b>Advanced configuration</b></label>
+      <span class="defs" id="defs"></span>
+    </div>
+
+    <div id="advBox" class="hidden">
     <div class="toggles">
-      <button class="tg" id="tgP" aria-expanded="false"><span class="k">Pricing</span><span class="v" id="sumP"></span><span class="chev">▾</span></button>
+      <button class="tg" id="tgP" aria-expanded="false"><span class="k">Pricing &amp; regions</span><span class="v" id="sumP"></span><span class="chev">▾</span></button>
+      <button class="tg" id="tgS" aria-expanded="false"><span class="k">Additional storage</span><span class="v" id="sumS"></span><span class="chev">▾</span></button>
       <button class="tg" id="tgA" aria-expanded="false"><span class="k">Sizing assumptions</span><span class="v" id="sumA"></span><span class="chev">▾</span></button>
     </div>
 
     <div class="drawer hidden" id="dP">
-      <div class="dhead"><b>Pricing</b><button class="link" data-reset="p">Reset to defaults</button></div>
+      <div class="dhead"><b>Pricing &amp; regions</b><button class="link" data-reset="p">Reset to defaults</button></div>
       <div class="fgrid">
         <div class="field"><label>Commitment</label><select id="term"><option value="3yr">3-year, monthly payments</option><option value="1yr">1-year, monthly payments</option><option value="od">On-demand</option></select></div>
         <div class="field"><label>Hours per month</label><input type="number" id="hours" value="744" min="672" max="744"></div>
         <div class="field"><label>Amazon EVS EC2 basis</label><select id="evsBasis"><option value="instance">Standard instance</option><option value="host">Dedicated Host</option></select></div>
       </div>
       <div class="pgrid" id="provSel"></div>
+    </div>
+
+    <div class="drawer hidden" id="dS">
+      <div class="dhead"><b>Additional storage</b><button class="link" data-reset="s">Reset to cheapest</button></div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 4px">Used only when it costs less than adding vSAN hosts (or is required, for shapes with no local vSAN). <b>Cheapest</b> picks the lowest-priced option that suits running VMs in the region.</p>
+      <div class="sgrid" id="stoSel"></div>
     </div>
 
     <div class="drawer hidden" id="dA">
@@ -265,6 +308,7 @@ body.v2 .dt th{background:var(--navy);color:#fff}
         <div class="field"><label>vSAN dedup/compression</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. HA spares add compute only. Headroom is kept free on vSAN and on external datastores.</p>
+    </div>
     </div>
   </section>
 
@@ -306,11 +350,27 @@ function storageChoices(p, region){
       const price = typeof ov[t.id] === "number" ? ov[t.id] : (hourly ? t.priceHr : t.price);
       if (typeof price !== "number") continue;
       out.push({key:o.id+"|"+t.id, name:o.name, tier:t.label, kind:o.kind, hourly, price,
-        minGiB:o.id === "elastic-san" ? 16*1024 : 0, def:!!t.default, opt:o});
+        minGiB:o.id === "elastic-san" ? 16*1024 : 0, def:!!t.default, opt:o, t});
     }
   }
   return out.sort((a,b) => (a.kind === "block" ? 0 : 1) - (b.kind === "block" ? 0 : 1) || b.def - a.def);
 }
+// Cheapest option that suits running VMs (OCI Lower Cost / 0 VPU is for backups and archives)
+const monthlyPerGiB = (c, hours) => c.price * (c.hourly ? hours : 1);
+function cheapestChoice(p, region, hours){
+  return storageChoices(p, region).filter(c => !(c.opt.id === "oci-block" && c.t.id === "0"))
+    .sort((a,b) => monthlyPerGiB(a,hours) - monthlyPerGiB(b,hours) || (a.kind === "block" ? -1 : 1))[0] || null;
+}
+// Expected performance for a capacity, from the storage tool's per-TiB figures and caps
+function perf(c, tb){
+  const t = c.t, tib = tb * 1e12 / 2**40;
+  const vols = c.opt.unitMaxTiB ? Math.max(1, Math.ceil(tib / c.opt.unitMaxTiB)) : 1;
+  const capMul = /volume/.test(c.opt.capScope || "") ? vols : 1;
+  const iops = t.iopsPerTiB ? Math.min(t.iopsPerTiB * tib, t.capIops ? t.capIops * capMul : Infinity) : null;
+  const mbps = t.mbpsPerTiB ? Math.min(t.mbpsPerTiB * tib, t.capMbps ? t.capMbps * capMul : Infinity) : (t.fixedMbps || null);
+  return {iops, mbps, vols};
+}
+const perfText = (c, tb) => { const x = perf(c, tb); return [x.iops ? `~${fmt(x.iops)} IOPS` : null, x.mbps ? `~${fmt(x.mbps)} MB/s` : null].filter(Boolean).join(" · ") || "Not published"; };
 function storageCost(ch, tb, hours){
   if (!ch || tb <= 0) return 0;
   return Math.max(tb * GIB_PER_TB, ch.minGiB) * ch.price * (ch.hourly ? hours : 1);
@@ -329,40 +389,87 @@ function buildProvSel(){
     const pr = P.providers[p];
     const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
     return `<div class="pbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
-      <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div>
-      <div class="field" id="f_st_${p}"><label>Additional storage</label><select id="st_${p}"></select></div></div>`;
+      <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div></div>`;
   }).join("");
+  $("stoSel").innerHTML = ORDER.map(p => `<div class="sbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${P.providers[p].longName}</b>
+      <div class="field" id="f_st_${p}"><label>Option</label><select id="st_${p}"></select></div><div class="sdet" id="sd_${p}"></div></div>`).join("");
   ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; fillStorage(p); });
 }
 function fillStorage(p){
   const list = storageChoices(p, $("reg_"+p).value);
-  const cur = $("st_"+p).value;
-  $("st_"+p).innerHTML = `<option value="">None: vSAN on hosts only</option>` +
+  const cur = $("st_"+p).value || "auto";
+  $("st_"+p).innerHTML = `<option value="auto">Cheapest (default)</option><option value="">None: vSAN on hosts only</option>` +
     (p === "gcve" ? `<option value="so">Storage-only vSAN nodes (ve2, matching size class)</option>` : "") +
     list.map(c => `<option value="${c.key}">${esc(c.name)} (${c.kind === "block" ? "block" : "NFS"}) · ${esc(c.tier)}</option>`).join("");
-  if ([...$("st_"+p).options].some(o => o.value === cur)) $("st_"+p).value = cur;
+  $("st_"+p).value = [...$("st_"+p).options].some(o => o.value === cur) ? cur : "auto";
 }
+// Details of the selected storage option, from the storage pricing tool
+function storageDetails(p, hours, term){
+  const v = $("st_"+p).value, region = $("reg_"+p).value;
+  if (v === "") return `<p>No additional storage: all storage is on the hosts' vSAN, adding hosts until it fits.</p>`;
+  if (v === "so") {
+    const o = S.options.find(o => o.id === "gcve-so");
+    return `<dl><dt>Type</dt><dd>Extra vSAN capacity (storage-only nodes)</dd>
+      ${o.tiers.map(t => { const r = soRate(region, t.id, term); return `<dt>${t.id}</dt><dd>${t.rawTB} TB raw · ${typeof r === "number" ? money(r*hours) + "/node/mo" : "n/a"}</dd>`; }).join("")}</dl>
+      <ul>${(o.notes || []).slice(0,3).map(n => `<li>${esc(n)}</li>`).join("")}</ul>${links(o)}`;
+  }
+  const c = v === "auto" ? cheapestChoice(p, region, hours) : storageChoices(p, region).find(c => c.key === v);
+  if (!c) return `<p>No additional storage is available in this region.</p>`;
+  const o = c.opt, t = c.t, mo = monthlyPerGiB(c, hours);
+  const cap = x => x ? fmt(x) : "–";
+  return `${v === "auto" ? `<p class="auto">Cheapest here: <b>${esc(o.name)} · ${esc(t.label)}</b></p>` : ""}
+    <dl><dt>Protocol / datastore</dt><dd>${esc(o.protocol)} · ${esc(o.datastore)}</dd>
+    <dt>Media</dt><dd>${esc(o.media || "–")}</dd><dt>Ownership</dt><dd>${esc(o.ownership || "–")}</dd>
+    <dt>Size limits</dt><dd>${esc(o.minSize || "–")} to ${esc(o.maxSize || "–")}</dd>
+    <dt>Price</dt><dd>$${mo.toFixed(4)}/GiB-mo · ${money(mo*1024)}/TiB-mo${c.minGiB ? ` · min ${c.minGiB/1024} TiB` : ""}</dd>
+    <dt>Performance</dt><dd>${t.iopsPerTiB ? fmt(t.iopsPerTiB) + " IOPS/TiB" : "–"} · ${t.mbpsPerTiB ? fmt(t.mbpsPerTiB) + " MB/s per TiB" : t.fixedMbps ? t.fixedMbps + " MB/s fixed" : "–"}</dd>
+    <dt>Maximum</dt><dd>${cap(t.capIops)} IOPS · ${cap(t.capMbps)} MB/s ${esc(o.capScope || "")}</dd>
+    <dt>Scaling</dt><dd>${esc(o.scaling || "–")}</dd></dl>
+    ${t.desc ? `<p>${esc(t.desc)}</p>` : ""}<ul>${(o.notes || []).slice(0,2).map(n => `<li>${esc(n)}</li>`).join("")}</ul>${links(o)}`;
+}
+const links = o => (o.links || []).length ? `<p class="lk">${o.links.map(([l,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(" · ")}</p>` : "";
 function summaries(){
   const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k]($(k).value)}</i>` : LBL[k]($(k).value));
   const regChg = ORDER.filter(p => $("reg_"+p).value !== P.providers[p].defaultRegion).length;
-  $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt", (n => n ? `<i>extra storage on ${n}</i>` : "vSAN only")(ORDER.filter(p => $("st_"+p).value).length)].join(" · ");
-  ORDER.forEach(p => $("f_st_"+p).classList.toggle("chg", !!$("st_"+p).value));
+  $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt"].join(" · ");
+  const stChg = ORDER.filter(p => $("st_"+p).value !== "auto").length;
+  $("sumS").innerHTML = stChg ? `<i>${stChg} changed</i>` : "cheapest on each cloud";
+  ORDER.forEach(p => $("f_st_"+p).classList.toggle("chg", $("st_"+p).value !== "auto"));
+  const hours = +$("hours").value || 744;
+  ORDER.forEach(p => $("sd_"+p).innerHTML = storageDetails(p, hours, $("term").value));
+  $("defs").innerHTML = $("adv").checked ? "Change any setting below; changed values are highlighted."
+    : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>cheapest additional storage</b> (e.g. OCI Block Volume Balanced 10 VPU) when it lowers cost · 4:1 vCPU/core · +20% growth · N+1 · RAID-5 · 25% free space`;
   $("sumA").innerHTML = sum(["aRatio","aGrowth","aHa","aPol","aSlack"]).join(" · ") + (["aRamOc","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
   [...PKEYS, ...AKEYS].forEach(k => $(k).closest(".field").classList.toggle("chg", changed(k)));
   ORDER.forEach(p => $("f_reg_"+p).classList.toggle("chg", $("reg_"+p).value !== P.providers[p].defaultRegion));
 }
 function toggle(btn, drawer){
   btn.onclick = () => { const open = btn.getAttribute("aria-expanded") !== "true";
-    ["tgP","tgA"].forEach(id => $(id).setAttribute("aria-expanded","false")); $("dP").classList.add("hidden"); $("dA").classList.add("hidden");
+    ["tgP","tgS","tgA"].forEach(id => $(id).setAttribute("aria-expanded","false")); ["dP","dS","dA"].forEach(id => $(id).classList.add("hidden"));
     if (open) { btn.setAttribute("aria-expanded","true"); $(drawer).classList.remove("hidden"); } };
 }
-toggle($("tgP"),"dP"); toggle($("tgA"),"dA");
+toggle($("tgP"),"dP"); toggle($("tgS"),"dS"); toggle($("tgA"),"dA");
 document.querySelectorAll("[data-reset]").forEach(b => b.onclick = () => {
-  const keys = b.dataset.reset === "p" ? PKEYS : AKEYS;
-  keys.forEach(k => $(k).value = DEF[k]);
-  if (b.dataset.reset === "p") ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); $("st_"+p).value = ""; });
+  const w = b.dataset.reset;
+  if (w === "s") ORDER.forEach(p => $("st_"+p).value = "auto");
+  else (w === "p" ? PKEYS : AKEYS).forEach(k => $(k).value = DEF[k]);
+  if (w === "p") ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); });
   update();
 });
+// Advanced off = defaults. The advanced values are kept and come back when it is switched on again.
+let saved = null;
+const allKeys = () => [...PKEYS, ...AKEYS, ...ORDER.map(p => "reg_"+p), ...ORDER.map(p => "st_"+p)];
+$("adv").onchange = () => {
+  const on = $("adv").checked;
+  $("advBox").classList.toggle("hidden", !on);
+  if (on) { if (saved) { ORDER.forEach(p => { $("reg_"+p).value = saved["reg_"+p]; fillStorage(p); }); allKeys().forEach(k => $(k).value = saved[k]); } }
+  else {
+    saved = Object.fromEntries(allKeys().map(k => [k, $(k).value]));
+    [...PKEYS, ...AKEYS].forEach(k => $(k).value = DEF[k]);
+    ORDER.forEach(p => { $("reg_"+p).value = P.providers[p].defaultRegion; fillStorage(p); $("st_"+p).value = "auto"; });
+  }
+  update();
+};
 
 // ---------- input mode + RVTools ----------
 let mode = "man", rv = null;
@@ -462,12 +569,16 @@ function priceShape(s,req,a,ctx){
   const pc = ctx[s.p], rate = (pc.rates[s.id] || {})[ctx.term];
   const {need, plans} = size(s,req,a);
   if (typeof rate !== "number") return {s, need, plan:plans[0], na:"No price in this region / term"};
-  // Use the storage the user chose; vSAN-only when nothing extra is needed or nothing was chosen
-  const want = pc.choice === "so" ? "so" : pc.choice ? "ext" : null;
-  const pl0 = (want && plans.find(pl => pl.kind === want)) || plans.find(pl => pl.kind === "vsan");
-  if (!pl0) return {s, need, plan:plans[0], na:s.raw ? "Storage-only nodes not supported on this shape" : "No local vSAN: choose additional storage"};
+  // "auto": cheapest of vSAN-only, hosts + cheapest storage, and (GCVE) storage-only nodes.
+  // Otherwise the storage the user chose; vSAN-only when nothing extra is needed or nothing was chosen.
+  let cands;
+  if (pc.choice === "auto") cands = plans;
+  else { const want = pc.choice === "so" ? "so" : pc.choice ? "ext" : null;
+    const pl0 = (want && plans.find(pl => pl.kind === want)) || plans.find(pl => pl.kind === "vsan");
+    cands = pl0 ? [pl0] : []; }
+  if (!cands.length) return {s, need, plan:plans[0], na:s.raw ? "Storage-only nodes not supported on this shape" : "No local vSAN: choose additional storage"};
   let best = null;
-  for (const pl of [pl0]) {
+  for (const pl of cands) {
     if (pl.kind === "ext" && !pc.storage) continue;
     pl.nodeCost = pl.hosts*rate*ctx.hours;
     if (pl.kind === "so") {
@@ -478,7 +589,7 @@ function priceShape(s,req,a,ctx){
     pl.total = pl.nodeCost + pl.stoCost;
     if (!best || pl.total < best.total) best = pl;
   }
-  if (!best) return {s, need, plan:pl0, na:"No price for the chosen storage in this region / term"};
+  if (!best) return {s, need, plan:cands[0], na:"No price for the chosen storage in this region / term"};
   return {s, need, rate, plan:best};
 }
 function assumptions(){ return {ratio:+$("aRatio").value||4, ramOc:+$("aRamOc").value||1, growth:(+$("aGrowth").value||0)/100,
@@ -500,7 +611,7 @@ function update(){
     const region = $("reg_"+p).value, rates = {};
     for (const s of Calc.listShapes(P, p, region, {evsBasis:$("evsBasis").value})) rates[s.id] = s.rates;
     const key = $("st_"+p).value;
-    ctx[p] = {region, rates, choice:key, storage:storageChoices(p, region).find(c => c.key === key) || null};
+    ctx[p] = {region, rates, choice:key, storage:key === "auto" ? cheapestChoice(p, region, hours) : storageChoices(p, region).find(c => c.key === key) || null};
   }
   const results = SHAPES.map(s => priceShape(s, req, a, ctx));
   const by = {}, cheapest = {}, shown = {};
@@ -529,7 +640,7 @@ function render(){
   if (view === 2) { $("out").innerHTML = h + tableView(ranked, months); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
-  h += `<div class="sec"><div><h2>Result</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div></div>
+  h += `<div class="sec"><div><h2>Result</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div><button class="pptb" data-ppt>Download PPT</button></div>
    <div class="winner" style="--wc:${COLOR[w]}"><div>
      <div class="t">Lowest cost</div>
      <div class="h">${P.providers[w].longName}</div>
@@ -544,6 +655,10 @@ function render(){
   bindOut(cheapest);
 }
 function bindOut(cheapest){
+  document.querySelectorAll("[data-ppt]").forEach(b => b.onclick = async () => {
+    b.disabled = true; const t = b.textContent; b.textContent = "Building…";
+    try { await Deck.download(deckModel()); } catch (e) { alert(e.message); }
+    b.disabled = false; b.textContent = t; });
   document.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => { openDrill = openDrill === b.dataset.drill ? null : b.dataset.drill; render();
     if (openDrill) $("drill").scrollIntoView({behavior:"smooth", block:"start"}); });
   document.querySelectorAll("[data-pick]").forEach(tr => tr.onclick = () => { const [p,id] = tr.dataset.pick.split("|"); pick[p] = id === cheapest[p].s.id ? undefined : id; update(); });
@@ -577,7 +692,7 @@ function card(p, rank, r, cheap, ocvs, months){
      <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(last.ctx[p].region)}`}</div></div>
    <div class="need">${needBars(r)}</div>
    ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
-   ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}</div>` : ""}
+   ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span></div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
    <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
    <button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button></div>`;
@@ -587,14 +702,57 @@ function drill(p){
   const pr = P.providers[p], rows = last.by[p], sel = last.shown[p], cheap = last.cheapest[p];
   const cell = (v, d) => `<td class="num${d?" d":""}">${v==null?"–":v}</td>`;
   return `<div class="dt" id="drill" style="--c:${COLOR[p]}"><div class="hd"><b>${pr.longName}: every shape</b><span style="font-size:12.5px;color:var(--muted)">Nodes per resource; the one that sets the host count is in colour. Click a row to use that shape.</span></div>
-  <div class="tbl"><table><thead><tr><th>Shape</th><th>Per host</th><th>CPU</th><th>RAM</th><th>Storage</th><th>+HA / min</th><th>Hosts</th><th>Plan</th><th>Hosts $/mo</th><th>Storage $/mo</th><th>Total $/mo</th></tr></thead><tbody>
+  <table class="fit"><thead><tr><th>Shape</th><th>CPU nodes</th><th>RAM nodes</th><th>Storage nodes</th><th>+HA / min</th><th>Hosts</th><th>Storage plan</th><th>Hosts $/mo</th><th>Storage $/mo</th><th>Total $/mo</th></tr></thead><tbody>
   ${rows.map(r => { const n = r.need, pl = r.plan, d = pl.driver;
-    return `<tr data-pick="${p}|${esc(r.s.id)}" class="${r===sel?"sel":""}"><td><b>${esc(r.s.label)}</b>${r===cheap?`<span class="tag">Cheapest</span>`:""}${r===sel&&r!==cheap?`<span class="tag o">Selected</span>`:""}</td>
-    <td class="num" style="color:var(--muted)">${r.s.cores}c · ${fmt(r.s.ram)} GB · ${r.s.raw?r.s.raw+" TB":"no vSAN"}</td>
+    return `<tr data-pick="${p}|${esc(r.s.id)}" class="${r===sel?"sel":""}"><td><b>${esc(r.s.label)}</b>${r===cheap?`<span class="tag">Cheapest</span>`:""}${r===sel&&r!==cheap?`<span class="tag o">Selected</span>`:""}<br><span class="spec">${r.s.cores} cores · ${fmt(r.s.ram)} GB · ${r.s.raw?r.s.raw+" TB vSAN":"no vSAN"}</span></td>
     ${cell(n.cpu, d==="CPU")}${cell(n.ram, d==="RAM")}${cell(n.sto, d==="Storage")}<td class="num">+${n.ha} / ${n.min}${d==="Minimum"?" ◂":""}</td>
     <td class="num"><b>${pl.hosts}</b></td><td>${pl.kind==="vsan"?"vSAN":pl.kind==="so"?`+ ${pl.so} storage-only`:`+ ${pl.ext.toFixed(0)} TB ext.`}</td>
     ${r.na ? `<td class="na" colspan="3">${r.na}</td>` : `<td class="num">${money(pl.nodeCost)}</td><td class="num">${pl.stoCost?money(pl.stoCost):"–"}</td><td class="num"><b>${money(pl.total)}</b></td>`}</tr>`; }).join("")}
-  </tbody></table></div></div>`;
+  </tbody></table></div>`;
+}
+
+// ---------- PowerPoint model ----------
+function deckModel(){
+  const {ctx, shown, term, hours, req} = last, T = Calc.TERMS[term], months = T.months;
+  const cols = ORDER.filter(p => shown[p]), base = shown.ocvs;
+  const row = (label, f, o = {}) => ({label, cells: cols.map(p => f(shown[p], p)), ...o});
+  const sto = (r, p) => r.plan.kind === "so" ? `${r.plan.so} × ${r.plan.soId}` : r.plan.ext ? `${r.plan.ext.toFixed(0)} TB ${ctx[p].storage.name}` : "None (vSAN only)";
+  const save = (r, p, m) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * m;
+    return `${d < 0 ? "−" : ""}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * m) * 100)}%)`; };
+  const rows = [
+    {section:"CONFIGURATION"},
+    row("Region", (r, p) => (P.providers[p].regions.find(x => x.id === ctx[p].region) || {name:ctx[p].region}).name),
+    row("Node / shape", r => r.s.label),
+    row("Nodes in cluster", r => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}`),
+    row("Nodes for CPU / RAM / storage", r => `${r.need.cpu} / ${r.need.ram} / ${r.need.sto == null ? "–" : r.need.sto}  (${r.plan.driver})`),
+    row("Additional storage", sto),
+    {section:"HARDWARE"},
+    row("Cores / RAM per node", r => `${r.s.cores} / ${fmt(r.s.ram)} GB`),
+    row("Usable vSAN", r => r.s.raw ? `${r.plan.usable.toFixed(0)} TB (${r.plan.pol})` : "—"),
+    {section:`${T.short} PRICING`},
+    row("Per node / month", r => money(r.rate * hours)),
+    row("Hosts / month", r => money(r.plan.nodeCost)),
+    row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
+    row("Total / month", r => money(r.plan.total), {strong:true}),
+    row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
+  ];
+  if (base) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
+  const callouts = base ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+    return d >= 0 ? {positive:true, title:`${pct}% lower than ${P.providers[p].name}`, sub:`Save ${kmoney(d * months)} over ${months} months`}
+      : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
+  return {
+    heads: cols.map(p => P.providers[p].name), rows, callouts,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage (after ${$("aGrowth").value}% growth) · ${T.label} · ${hours} h/month · BYOL`,
+    badge: T.short,
+    notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
+    sources: [
+      ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.`],
+      ["Sizing", `${$("aRatio").value}:1 vCPU per core · +${$("aGrowth").value}% growth · ${LBL.aHa($("aHa").value)} · ${POL[$("aPol").value].l} · ${$("aSlack").value}% free space · ${$("aRamRes").value}% host RAM reserved.`],
+      ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
+      ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
+    ],
+    fileName: `OCVS_Sizing_${term}_${cols.map(p => shown[p].s.id.replace(/[^\w.-]/g, "")).join("_vs_")}.pptx`
+  };
 }
 
 // ---------- view 2: comparison table ----------
@@ -607,7 +765,7 @@ function tableView(ranked, months){
   const save = (r, p, mult) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * mult;
     return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
-  let h = `<section class="t2"><div class="t2head"><h2>Comparison</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>
+  let h = `<section class="t2"><div class="t2head"><div><h2>Comparison</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div><button class="pptb" data-ppt>Download PPT</button></div>
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${sec("Configuration")}
   ${row("Region", (r, p) => esc(ctx[p].region))}
@@ -628,6 +786,7 @@ function tableView(ranked, months){
   ${sec("Additional storage")}
   ${row("Option", stoName)}
   ${row("Capacity", r => r.plan.kind === "so" ? `${(r.plan.so * r.plan.soRaw).toFixed(1)} TB raw` : r.plan.ext ? r.plan.ext.toFixed(1) + " TB" : "—")}
+  ${row("Expected performance", (r, p) => r.plan.ext ? perfText(ctx[p].storage, r.plan.ext) : r.plan.kind === "so" ? "vSAN (local NVMe)" : "—")}
   ${sec(`${T.short} pricing`)}
   ${row("Rate / node / hour", r => "$" + r.rate.toFixed(2))}
   ${row("Per node / month", r => money(r.rate * hours))}
