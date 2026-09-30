@@ -83,3 +83,18 @@ Switch on **Advanced configuration** to change the commitment, hours, regions, s
 Host shapes and specs are in `data/catalog.js`; prices in `data/prices.js`. GPU shapes are excluded.
 
 It's a static single-page app with no backend, hosted on GitHub Pages.
+
+## Confluence edition
+
+A self-contained version for an internal Confluence (Data Center) page, with no internet dependencies (the Excel reader, PowerPoint library, catalog and prices are all inside one file):
+
+```bash
+python tools/build_confluence.py
+```
+
+This writes `dist/confluence/`:
+- `ocvs-sizer-tool.js`: attach it to the Confluence page.
+- `confluence-macro.html`: paste its contents into an **HTML** macro on that page.
+- `preview.html`: local preview that mimics Confluence.
+
+The tool renders in its own shadow root, so Confluence styles don't affect it. To update prices on Confluence: run `tools/fetch_prices.py`, rebuild, and upload the new `ocvs-sizer-tool.js` to the page (Confluence keeps the old versions as attachment history).
