@@ -92,7 +92,7 @@ A self-contained version for an internal Confluence (Data Center) page, with no 
 python tools/build_confluence.py
 ```
 
-This writes `dist/confluence/`:
+This writes `dist/confluence/` (not stored in the repo; build it when you need it):
 - `ocvs-sizer-tool.js`: attach it to the Confluence page.
 - `confluence-macro.html`: paste its contents into an **HTML** macro on that page.
 - `preview.html`: local preview that mimics Confluence.
