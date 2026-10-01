@@ -174,6 +174,12 @@ body.v2 .pill{border-radius:6px}
 .cmp thead th.base{color:var(--gold)}
 .cmp tbody th{text-align:left;font-weight:700;color:#222;background:#fff;font-size:14px;text-transform:none;letter-spacing:0;padding:8px 12px;border:1px solid var(--line)}
 .cmp td{text-align:center;padding:8px 12px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+/* fit the comparison table to the available width: no sideways scrolling */
+.t2 .tbl{overflow-x:visible}
+.cmp{table-layout:fixed;width:100%}
+.cmp th,.cmp td{white-space:normal;overflow-wrap:anywhere}
+.cmp thead th:first-child{width:20%}
+@media (max-width:1100px){.cmp thead th,.cmp tbody th,.cmp td{font-size:12px;padding:6px 6px}.cmp tr.tot td{font-size:13px}}
 .cmp td.base{background:var(--base);font-weight:600;color:var(--navy)}
 .cmp tr.secrow td{background:var(--soft);text-align:left;font-family:Georgia,serif;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brown)}
 .cmp tr.tot td{font-size:15px}
