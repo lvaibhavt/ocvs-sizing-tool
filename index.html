@@ -322,8 +322,8 @@ table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
     <div class="drawer hidden" id="dA">
       <div class="dhead"><b>Sizing assumptions</b><button class="link" data-reset="a">Reset to defaults</button></div>
       <div class="fgrid">
-        <div class="field"><label>vCPU per physical core</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
-        <div class="field"><label>RAM overcommit (1 = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
+        <div class="field"><label>vCPU/physical core overcommit (1x = none)</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
+        <div class="field"><label>RAM overcommit (1x = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
         <div class="field"><label>Growth buffer %</label><input type="number" id="aGrowth" value="0" min="0"></div>
         <div class="field"><label>Host RAM reserved %</label><input type="number" id="aRamRes" value="0" min="0" max="50"></div>
         <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="0">None</option><option value="1">N+1</option><option value="2">N+2</option></select></div>
@@ -409,7 +409,7 @@ function storageCost(ch, tb, hours){
 const DEF = {term:"3yr",hours:"744",evsBasis:"instance",aRatio:"4",aRamOc:"1",aGrowth:"0",aRamRes:"0",aHa:"0",aPol:"r5",aSlack:"0",aDedup:"1"};
 const PKEYS = ["term","hours","evsBasis"], AKEYS = ["aRatio","aRamOc","aGrowth","aRamRes","aHa","aPol","aSlack","aDedup"];
 const LBL = {term:v=>({"3yr":"3-yr","1yr":"1-yr",od:"On-demand"}[v]),hours:v=>v+" h/mo",evsBasis:v=>v==="host"?"EVS Dedicated Host":"EVS instance",
-  aRatio:v=>v+":1 vCPU/core",aRamOc:v=>v==="1"?"1:1 RAM":v+"× RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
+  aRatio:v=>v+"x vCPU/core overcommit",aRamOc:v=>v+"x RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
   aHa:v=>v==="0"?"no HA spare":"N+"+v,aPol:v=>POL[v].l,aSlack:v=>v+"% free space",aDedup:v=>v==="1"?"no dedup":v+"× dedup"};
 const changed = k => String($(k).value) !== DEF[k];
 
@@ -477,7 +477,7 @@ function summaries(){
   const hours = +$("hours").value || 744;
   ORDER.forEach(p => $("sd_"+p).innerHTML = storageDetails(p, hours, $("term").value));
   $("defs").innerHTML = $("adv").checked ? "Change any setting below; changed values are highlighted."
-    : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>4:1 vCPU/core</b> · <b>1:1 RAM</b> · RAID-5 · no growth, HA spare or free-space buffer.<br>Base storage configuration considered: ${baseStorageText(hours)}`;
+    : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>4x vCPU/core overcommit</b> · <b>1x RAM overcommit (none)</b> · RAID-5 · no growth, HA spare or free-space buffer.<br>Base storage configuration considered: ${baseStorageText(hours)}`;
   $("sumA").innerHTML = sum(["aRatio","aRamOc","aPol"]).join(" · ") + (["aGrowth","aHa","aSlack","aRamRes","aDedup"].some(changed) ? " · <i>+ more</i>" : "");
   [...PKEYS, ...AKEYS].forEach(k => $(k).closest(".field").classList.toggle("chg", changed(k)));
   ORDER.forEach(p => $("f_reg_"+p).classList.toggle("chg", $("reg_"+p).value !== P.providers[p].defaultRegion));
@@ -773,7 +773,7 @@ function cardsModel(){
       if (minNote(st, pl.ext)) { notes.push(`¹ ${st.name} for Azure VMware Solution needs at least ${st.minGiB / 1024} TiB of base capacity (Microsoft: "Use Azure Elastic SAN with Azure VMware Solution"), so ${st.minGiB / 1024} TB is billed although ${pl.ext.toFixed(1)} TB is needed.`); e += " ¹"; }
       parts.push(e); }
     return parts.join(" + ") || "—"; };
-  const sizedFor = r => ({CPU:`CPU: ${fmt(req.cpu)} vCPU at ${a.ratio}:1 per core`, RAM:`Memory: ${tb(req.ram)} RAM`,
+  const sizedFor = r => ({CPU:`CPU: ${fmt(req.cpu)} vCPU at ${a.ratio}x overcommit`, RAM:`Memory: ${tb(req.ram)} RAM`,
     Storage:`Storage: ${fmt(req.sto)} TB on vSAN`, Minimum:`Minimum cluster size (${r.need.min} hosts)`}[r.plan.driver]);
   const delta = p => { if (p === "ocvs" || !ocvs) return {t: p === w ? "Lowest cost" : "", c: "15803D"};
     const d = shown[p].plan.total - ocvs.plan.total, pct = Math.round(Math.abs(d) / ocvs.plan.total * 100);
@@ -837,7 +837,7 @@ function deckModel(){
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
       ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${ORDER.some(p => ctx[p].disc) ? " Storage discounts: " + ORDER.filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
-      ["Sizing", [`${$("aRatio").value}:1 vCPU per core`, LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
+      ["Sizing", [LBL.aRatio($("aRatio").value), LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
     ],
