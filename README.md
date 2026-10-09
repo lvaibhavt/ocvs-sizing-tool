@@ -45,7 +45,7 @@ Out of the box the tool uses the basics: **3-year commitment with monthly paymen
 | GCVE | Cheapest of Google Cloud NetApp Volumes Standard and storage-only vSAN nodes |
 | Amazon EVS | FSx for NetApp ONTAP · Single-AZ SSD |
 
-Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, the storage option per cloud, and a **storage discount %** per cloud (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
+Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, the storage option per cloud, and a **discount %** per cloud (taken off the whole price: hosts and additional storage) (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
 
 **Download PPT** (both views) builds a comparison slide and an assumptions & sources slide in the same style as VMware Cloud Pricing Compare.
 

@@ -293,7 +293,7 @@ table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
     <div class="toggles">
       <button class="tg" id="tgP" aria-expanded="false"><span class="k">Pricing &amp; regions</span><span class="v" id="sumP"></span><span class="chev">▾</span></button>
       <button class="tg" id="tgS" aria-expanded="false"><span class="k">Additional storage</span><span class="v" id="sumS"></span><span class="chev">▾</span></button>
-      <button class="tg" id="tgD" aria-expanded="false"><span class="k">Storage discount</span><span class="v" id="sumD"></span><span class="chev">▾</span></button>
+      <button class="tg" id="tgD" aria-expanded="false"><span class="k">Discount</span><span class="v" id="sumD"></span><span class="chev">▾</span></button>
       <button class="tg" id="tgA" aria-expanded="false"><span class="k">Sizing assumptions</span><span class="v" id="sumA"></span><span class="chev">▾</span></button>
     </div>
 
@@ -314,8 +314,8 @@ table.fit .spec{font-size:11.5px;color:var(--muted);font-weight:400}
     </div>
 
     <div class="drawer hidden" id="dD">
-      <div class="dhead"><b>Storage discount</b><button class="link" data-reset="d">Reset to 0%</button></div>
-      <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">Discount off list price for additional storage on each cloud (including GCVE storage-only nodes). Host prices are not affected.</p>
+      <div class="dhead"><b>Discount</b><button class="link" data-reset="d">Reset to 0%</button></div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">One discount per cloud, taken off that cloud's whole price: hosts and any additional storage (including GCVE storage-only nodes). For example 50% halves the total, whichever commitment is selected.</p>
       <div class="fgrid" id="discSel"></div>
     </div>
 
@@ -606,7 +606,9 @@ function soRate(region, soId, term){
   return arr ? arr[{od:0,"1yr":1,"3yr":2}[term]] : undefined;
 }
 function priceShape(s,req,a,ctx){
-  const pc = ctx[s.p], rate = (pc.rates[s.id] || {})[ctx.term];
+  const pc = ctx[s.p], listRate = (pc.rates[s.id] || {})[ctx.term];
+  // the discount applies to the whole price: hosts here, storage below
+  const rate = typeof listRate === "number" ? listRate * (1 - pc.disc) : listRate;
   const {need, plans} = size(s,req,a);
   if (typeof rate !== "number") return {s, need, plan:plans[0], na:"No price in this region / term"};
   // "auto": cheapest of vSAN-only, hosts + cheapest storage, and (GCVE) storage-only nodes.
@@ -672,7 +674,7 @@ function render(){
   const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
   const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
 
-  const disc = ORDER.filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} storage −${Math.round(ctx[p].disc*100)}%</span>`).join("");
+  const disc = ORDER.filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
   let h = `<div class="sec"><div><h2>Your requirement</h2><p>${+$("aGrowth").value ? `After ${$("aGrowth").value}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span></div>
    <div class="req" style="margin-top:8px">${used}${disc}</div>`;
@@ -836,7 +838,7 @@ function deckModel(){
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
-      ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${ORDER.some(p => ctx[p].disc) ? " Storage discounts: " + ORDER.filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
+      ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${ORDER.some(p => ctx[p].disc) ? " Discounts on hosts and storage: " + ORDER.filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
       ["Sizing", [LBL.aRatio($("aRatio").value), LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
