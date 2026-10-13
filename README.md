@@ -49,6 +49,16 @@ Switch on **Advanced configuration** to change the commitment, hours, regions, s
 
 **Download PPT** (both views) builds a comparison slide and an assumptions & sources slide in the same style as VMware Cloud Pricing Compare.
 
+## More than one cluster (optional)
+
+Switch on **Add a workload cluster** to size a second cluster in the same SDDC. Two tabs appear, **Management cluster** and **Workload cluster**, each with its own input (numbers or RVTools report), its own results and its own shape picks. Pricing, regions, storage option, discount and sizing assumptions are shared by both clusters.
+
+- **Download PPT (this cluster)** gives the deck for the cluster you are looking at.
+- **Download consolidated PPT** gives: slide 1 management cluster, slide 2 workload cluster, slide 3 both clusters together (each cluster's configuration, cores and RAM, and the consolidated monthly and term price), then assumptions and sources. It follows the style of the current view.
+- The page also shows a **Consolidated: both clusters** table under the results.
+
+With the switch off, the tool works as a single-cluster tool.
+
 ## How to use it
 
 1. Choose one input method:

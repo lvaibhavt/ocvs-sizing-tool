@@ -21,7 +21,7 @@
     s.background = { color: C.white };
     banner(pptx, s);
 
-    s.addText("OCVS Sizing & Pricing", { x: M, y: 0.45 + D, w: 11, h: 0.8, fontFace: HEAD, fontSize: 38, bold: true, color: C.navy, margin: 0, isTextBox: true });
+    s.addText(rep.title || "OCVS Sizing & Pricing", { x: M, y: 0.45 + D, w: 11, h: 0.8, fontFace: HEAD, fontSize: 38, bold: true, color: C.navy, margin: 0, isTextBox: true });
     s.addText(rep.subtitle, { x: M, y: 1.22 + D, w: W - 2 * M, h: 0.35, fontFace: BODY, fontSize: 15, color: C.muted, margin: 0, isTextBox: true });
     s.addShape(pptx.ShapeType.roundRect, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fill: { color: C.navy }, rectRadius: 0.3, line: { color: C.navy } });
     s.addText(rep.badge, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fontFace: HEAD, fontSize: 17, bold: true, color: C.gold, align: "center", valign: "middle", margin: 0, isTextBox: true });
@@ -178,8 +178,8 @@
     s.background = { color: "FFFFFF" };
     banner(pptx, s);
     const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
-    T("RECOMMENDED CONFIGURATION", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
-    T("The lowest-cost configuration on each cloud that meets the requirement", { x: M, y: 0.92, w: W - 2 * M, h: 0.6, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
+    T(m.eyebrow || "RECOMMENDED CONFIGURATION", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
+    T(m.title2 || "The lowest-cost configuration on each cloud that meets the requirement", { x: M, y: 0.92, w: W - 2 * M, h: 0.6, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
     T(m.subhead, { x: M, y: 1.52, w: W - 2 * M, h: 0.35, fontSize: 13, color: K.muted });
 
     const cy = 2.1, ch = H - cy - 0.75, n = m.cards.length, gap = 0.25;
@@ -194,9 +194,9 @@
         T("LOWEST COST", { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle", charSpacing: 1 });
       }
       c.rows.forEach(([l, v], k) => {
-        const y = cy + 0.95 + k * 0.78;
-        T([{ text: l.toUpperCase(), options: { fontSize: 9, bold: true, color: K.muted, charSpacing: 1, breakLine: true } }, { text: v, options: { fontSize: 13, bold: k === 0, color: K.text } }],
-          { x: x + 0.2, y, w: cw - 0.4, h: 0.72, valign: "top", fit: "shrink" });
+        const rowH = m.rowH || 0.78, y = cy + 0.95 + k * rowH;
+        T([{ text: l.toUpperCase(), options: { fontSize: 9, bold: true, color: K.muted, charSpacing: 1, breakLine: true } }, { text: v, options: { fontSize: m.rowFont || 13, bold: k === 0 && !m.rowH, color: K.text } }],
+          { x: x + 0.2, y, w: cw - 0.4, h: rowH - 0.06, valign: "top", fit: "shrink" });
       });
       const fy = cy + ch - 1.35;
       s.addShape(pptx.ShapeType.rect, { x: x + 0.01, y: fy, w: cw - 0.02, h: 1.34, fill: { color: best ? "FBEAE7" : K.soft }, line: { color: best ? "FBEAE7" : K.soft } });
@@ -223,5 +223,24 @@
     await buildCards(m).writeFile({ fileName: m.fileName });
   }
 
-  root.Deck = { build, download, buildCards, downloadCards };
+  // Consolidated deck for two clusters: slide 1 management, slide 2 workload, slide 3 both together,
+  // then assumptions. m.view picks the slide style (2 = table, otherwise the card layout).
+  function buildConsolidated(m) {
+    if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load (check your internet connection).");
+    const pptx = new window.PptxGenJS();
+    pptx.defineLayout({ name: "DECK", width: W, height: H });
+    pptx.layout = "DECK";
+    pptx.title = "OCVS Sizing & Pricing: consolidated";
+    const slide = m.view === 2 ? slideMain : slideSolutions;
+    m.clusters.forEach(c => slide(pptx, c));
+    slide(pptx, m.total);
+    slideSources(pptx, m);
+    return pptx;
+  }
+
+  async function downloadConsolidated(m) {
+    await buildConsolidated(m).writeFile({ fileName: m.fileName });
+  }
+
+  root.Deck = { build, download, buildCards, downloadCards, buildConsolidated, downloadConsolidated };
 })(this);
