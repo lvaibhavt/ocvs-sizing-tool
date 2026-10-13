@@ -21,7 +21,8 @@
     s.background = { color: C.white };
     banner(pptx, s);
 
-    s.addText(rep.title || "OCVS Sizing & Pricing", { x: M, y: 0.45 + D, w: 11, h: 0.8, fontFace: HEAD, fontSize: 38, bold: true, color: C.navy, margin: 0, isTextBox: true });
+    const title = rep.title || "OCVS Sizing & Pricing";
+    s.addText(title, { x: M, y: 0.45 + D, w: 11.4, h: 0.8, fontFace: HEAD, fontSize: title.length > 44 ? 22 : title.length > 30 ? 28 : 38, bold: true, color: C.navy, margin: 0, isTextBox: true, valign: "middle" });
     s.addText(rep.subtitle, { x: M, y: 1.22 + D, w: W - 2 * M, h: 0.35, fontFace: BODY, fontSize: 15, color: C.muted, margin: 0, isTextBox: true });
     s.addShape(pptx.ShapeType.roundRect, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fill: { color: C.navy }, rectRadius: 0.3, line: { color: C.navy } });
     s.addText(rep.badge, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fontFace: HEAD, fontSize: 17, bold: true, color: C.gold, align: "center", valign: "middle", margin: 0, isTextBox: true });
@@ -138,14 +139,14 @@
     s.background = { color: "FFFFFF" };
     banner(pptx, s);
     const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
-    T("EXECUTIVE SUMMARY", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
+    T(m.sumEyebrow || "EXECUTIVE SUMMARY", { x: M, y: 0.6, w: W - 2 * M, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
     T(m.headline, { x: M, y: 0.92, w: W - 2 * M, h: 0.7, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
     T(m.subhead, { x: M, y: 1.62, w: W - 2 * M, h: 0.35, fontSize: 14, color: K.muted });
 
     // requirement panel (left)
     const py = 2.25, ph = 4.7, lw = 4.3;
     s.addShape(pptx.ShapeType.roundRect, { x: M, y: py, w: lw, h: ph, rectRadius: 0.1, fill: { color: K.soft }, line: { color: K.soft } });
-    T("YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
+    T(m.reqLabel || "YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2, fit: "shrink" });
     m.req.forEach(([v, l], i) => T([{ text: v, options: { fontSize: 30, bold: true, color: K.text, breakLine: true } }, { text: l, options: { fontSize: 12, color: K.muted } }],
       { x: M + 0.3, y: py + 0.65 + i * 0.95, w: lw - 0.6, h: 0.85 }));
     s.addShape(pptx.ShapeType.line, { x: M + 0.3, y: py + 3.5, w: lw - 0.6, h: 0, line: { color: "D5D9E1", width: 1 } });
@@ -183,7 +184,7 @@
     s.background = { color: "FFFFFF" };
     banner(pptx, s);
     const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
-    T(m.eyebrow || "RECOMMENDED CONFIGURATION", { x: M, y: 0.6, w: 8, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
+    T(m.eyebrow || "RECOMMENDED CONFIGURATION", { x: M, y: 0.6, w: W - 2 * M, h: 0.3, fontSize: 12, bold: true, color: m.winner.color, charSpacing: 3 });
     T(m.title2 || "The lowest-cost configuration on each cloud that meets the requirement", { x: M, y: 0.92, w: W - 2 * M, h: 0.6, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
     T(m.subhead, { x: M, y: 1.52, w: W - 2 * M, h: 0.35, fontSize: 13, color: K.muted });
 
@@ -224,7 +225,7 @@
 
     const py = 2.25, ph = H - py - 0.75, lw = 4.3;
     s.addShape(pptx.ShapeType.roundRect, { x: M, y: py, w: lw, h: ph, rectRadius: 0.1, fill: { color: K.soft }, line: { color: K.soft } });
-    T(m.reqLabel || "YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
+    T(m.reqLabel || "YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2, fit: "shrink" });
     m.req.forEach(([v, l], i) => T([{ text: v, options: { fontSize: 34, bold: true, color: K.text, breakLine: true } }, { text: l, options: { fontSize: 13, color: K.muted } }],
       { x: M + 0.3, y: py + 0.8 + i * 1.25, w: lw - 0.6, h: 1.05 }));
 

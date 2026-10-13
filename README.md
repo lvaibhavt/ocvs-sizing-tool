@@ -53,7 +53,7 @@ Switch on **Advanced configuration** to change the commitment, hours, regions, s
 
 Switch on **Add workload clusters** and choose how many (1 to 14; with the management cluster that is the 15 clusters OCVS allows in an SDDC). A tab appears for the **Management cluster** and for each workload cluster. Each tab has its own input (numbers or RVTools report), its own results and its own shape picks. Pricing, regions, storage option, discount and sizing assumptions are shared by all clusters.
 
-- **Name a workload cluster** (for example Production, Non-production, Oracle databases) in the box under the tabs. The name is used on the tabs, in the consolidated table and in the PowerPoint.
+- **Name a workload cluster** (for example Production, Non-production, Oracle databases) in the box under the tabs. The name is shown with the cluster's number, for example "Test cluster (workload cluster 1)", in the page headings, the consolidated table and every PowerPoint slide for that cluster, including **Download PPT (this cluster)**. The assumptions slide lists every cluster by number and name.
 - **Download PPT (this cluster)** gives the deck for the cluster you are looking at.
 - **Download consolidated PPT** gives one slide per cluster, then all clusters together (each cluster's configuration and monthly cost, total nodes, cores and RAM, and the consolidated monthly and term price), then assumptions and sources. With many clusters the list of clusters moves to its own "Cluster breakdown" slides. It follows the style of the current view.
 - The page also shows a **Consolidated** table under the results.

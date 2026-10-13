@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610131343"></script>
+<script src="js/ppt.js?v=202610131355"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610131343"></script>
-<script src="data/prices.js?v=202610131343"></script>
-<script src="js/data.js?v=202610131343"></script>
+<script src="data/catalog.js?v=202610131355"></script>
+<script src="data/prices.js?v=202610131355"></script>
+<script src="js/data.js?v=202610131355"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -693,6 +693,20 @@ let cur = "mgmt";
 const multiOn = () => $("multi").checked;
 const wCount = () => Math.min(MAXW, Math.max(1, Math.round(+$("wcN").value) || 1));
 const clusterIds = () => multiOn() ? ["mgmt", ...WIDS.slice(0, wCount())] : ["mgmt"];
+const clusterNum = id => wCount() === 1 ? "Workload cluster" : "Workload cluster " + id.slice(1);
+const hasName = id => id !== "mgmt" && !!(store[id] && store[id].name);
+// "Test cluster (workload cluster 1)": the name with its number, used in headings, the consolidated table and the decks
+const clusterFull = id => id === "mgmt" ? "Management cluster" : hasName(id) ? `${store[id].name} (${clusterNum(id).toLowerCase()})` : clusterNum(id);
+// One line listing every cluster by number, with its name where it has one
+const clusterIndex = ids => ids.map(id => id === "mgmt" ? "Management cluster" : clusterNum(id) + (hasName(id) ? `: ${store[id].name}` : "")).join("; ");
+// Put the cluster's name and number on a single-cluster deck model
+function labelDeck(m, id){
+  const full = clusterFull(id);
+  if (view === 2) m.title = full;
+  else { m.eyebrow = full.toUpperCase(); m.sumEyebrow = `EXECUTIVE SUMMARY · ${full.toUpperCase()}`;
+    m.title2 = `${full}: lowest-cost configuration on each cloud`; m.reqLabel = `${clusterName(id).toUpperCase()} REQUIREMENT`; }
+  return m;
+}
 const clusterName = id => id === "mgmt" ? "Management cluster"
   : ((store[id] && store[id].name) || (wCount() === 1 ? "Workload cluster" : "Workload cluster " + id.slice(1)));
 function saveCluster(){ store[cur] = {mode, rv, cpu:$("mCpu").value, ram:$("mRam").value, sto:$("mSto").value, rvPower:$("rvPower").value, rvStor:$("rvStor").value, pick,
@@ -719,7 +733,7 @@ function baseOf(k){
 function allClusters(){
   if (!multiOn() || !last) return null;
   const list = clusterIds().map(id => { const b = baseOf(id);
-    return {id, name: clusterName(id), res: id === cur ? last : (b ? compute(b, (store[id] && store[id].pick) || {}) : null)}; });
+    return {id, name: clusterName(id), full: clusterFull(id), res: id === cur ? last : (b ? compute(b, (store[id] && store[id].pick) || {}) : null)}; });
   return {list, missing: list.filter(c => !c.res).map(c => c.name)};
 }
 function renderTabs(){
@@ -727,7 +741,7 @@ function renderTabs(){
   $("wcBox").classList.toggle("hidden", !multiOn());
   $("clNameBox").classList.toggle("hidden", !multiOn() || cur === "mgmt");
   $("clTabs").innerHTML = clusterIds().map(id => { const b = baseOf(id);
-    return `<button role="tab" data-cl="${id}" aria-selected="${id === cur}"><b>${esc(clusterName(id))}</b><span>${b ? `${fmt(b.cpu)} vCPU · ${fmt(b.ram)} GB · ${+b.sto.toFixed(1)} TB` : "RVTools report not uploaded yet"}</span></button>`; }).join("");
+    return `<button role="tab" data-cl="${id}" aria-selected="${id === cur}"><b>${esc(clusterName(id))}</b><span>${hasName(id) ? clusterNum(id) + " · " : ""}${b ? `${fmt(b.cpu)} vCPU · ${fmt(b.ram)} GB · ${+b.sto.toFixed(1)} TB` : "RVTools report not uploaded yet"}</span></button>`; }).join("");
   $("clTabs").querySelectorAll("[data-cl]").forEach(b => b.onclick = () => switchCluster(b.dataset.cl));
 }
 function setCount(n){
@@ -777,7 +791,7 @@ function render(){
   const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
 
   const disc = activeClouds().filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
-  const clName = multiOn() ? esc(clusterName(cur)) + ": " : "";
+  const clName = multiOn() ? esc(clusterFull(cur)) + ": " : "";
   const pptBtns = `<div class="btns"><button class="pptb" data-ppt>${multiOn() ? "Download PPT (this cluster)" : "Download PPT"}</button>${multiOn() ? `<button class="pptb alt" data-pptall>Download consolidated PPT</button>` : ""}</div>`;
   let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+$("aGrowth").value ? `After ${$("aGrowth").value}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span></div>
@@ -813,7 +827,7 @@ function consolidate(){
   const list = A.list, cols = ORDER.filter(p => list.every(c => c.res.shown[p])), per = {};
   for (const p of cols) {
     const parts = list.map(c => { const r = c.res.shown[p], pl = r.plan;
-      return {id: c.id, name: c.name, cfg: cfgText(r, p, c.res.ctx), hosts: pl.hosts, so: pl.so || 0, cores: pl.hosts * r.s.cores, ram: pl.hosts * r.s.ram, total: pl.total}; });
+      return {id: c.id, name: c.full, cfg: cfgText(r, p, c.res.ctx), hosts: pl.hosts, so: pl.so || 0, cores: pl.hosts * r.s.cores, ram: pl.hosts * r.s.ram, total: pl.total}; });
     const sum = k => parts.reduce((a, x) => a + x[k], 0);
     per[p] = {parts, hosts: sum("hosts"), so: sum("so"), cores: sum("cores"), ram: sum("ram"), total: sum("total")};
   }
@@ -831,7 +845,7 @@ function consPanel(){
     return `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) / base.total * 100)}%)</span>`; };
   return `<div class="sec"><div><h2>Consolidated: ${allWord(n)}</h2><p>Management + ${n - 1} workload cluster${n > 2 ? "s" : ""}, lowest-cost configuration on each cloud. ${many ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
   <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>${n} clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && many ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
-  ${c.list.map((cl, i) => row(esc(cl.name), x => `${esc(x.parts[i].cfg)}<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span> · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
+  ${c.list.map((cl, i) => row(esc(cl.full), x => `${esc(x.parts[i].cfg)}<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span> · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
   ${row("Total nodes", x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`, "tot")}
   ${row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
   ${row("Total / month", x => `<b>${money(x.total)}</b>`, "tot")}
@@ -856,7 +870,7 @@ function consModel(){
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   const notes = ["All clusters priced BYOL (customer brings the VCF licence). Indicative list prices; not a quote.", "Excludes VCF licences, networking, egress, backup, support and taxes."];
   const row = (label, f, o = {}) => ({label, cells: c.cols.map(p => f(c.per[p], p)), ...o});
-  const clusterRows = c.list.map((cl, i) => row(cl.name, x => `${x.parts[i].cfg} · ${money(x.parts[i].total)}/mo`));
+  const clusterRows = c.list.map((cl, i) => row(cl.full, x => `${x.parts[i].cfg} · ${money(x.parts[i].total)}/mo`));
   const totalRows = [row("Total nodes", nodes), row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`),
     row("Total / month", x => money(x.total), {strong:true}), row(`${months}-month total`, x => money(x.total * months), {strong:true}),
     ...(base && many ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])];
@@ -869,9 +883,8 @@ function consModel(){
 
   const slides = [];
   c.list.forEach((cl, i) => { const m = models[i];
-    if (view === 2) { m.title = cl.name; slides.push({kind:"main", model:m}); }
-    else { m.eyebrow = cl.name.toUpperCase(); m.title2 = `${cl.name}: lowest-cost configuration on each cloud`; m.reqLabel = `${cl.name.toUpperCase()} REQUIREMENT`;
-      slides.push({kind: many ? "cards" : "single", model:m}); } });
+    labelDeck(m, cl.id);
+    slides.push({kind: view === 2 ? "main" : many ? "cards" : "single", model:m}); });
   if (view === 2) {
     // with savings rows and callouts to fit as well, the cluster list moves to its own slide sooner
     if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
@@ -892,15 +905,24 @@ function consModel(){
   }
   const src = models[0].sources;
   return {slides,
-    sources: [src[0], src[1], ...c.cols.map(p => [P.providers[p].longName,
+    sources: [src[0], src[1], ["Clusters", clusterIndex(c.list.map(cl => cl.id)) + "."], ...c.cols.map(p => [P.providers[p].longName,
       (n <= 4 ? c.per[p].parts.map(pt => `${pt.name}: ${pt.cfg}`).join(". ") + "." : `${n} clusters, ${nodes(c.per[p])} nodes in total.`) + ` Source: ${P.providers[p].source}.`]), src[src.length - 1]],
     fileName: `OCVS_Sizing_Consolidated_${last.term}.pptx`};
+}
+// The deck for the open cluster. With several clusters it carries that cluster's name and number.
+function clusterDeckModel(){
+  const m = view === 2 ? deckModel() : cardsModel();
+  if (multiOn()) {
+    labelDeck(m, cur);
+    m.sources.splice(2, 0, ["Cluster", `${clusterFull(cur)}. One of ${clusterIds().length} clusters in the SDDC: ${clusterIndex(clusterIds())}.`]);
+    m.fileName = m.fileName.replace("OCVS_Sizing_", `OCVS_Sizing_${clusterFull(cur).replace(/[^\w-]+/g, "_").replace(/_+$/, "")}_`);
+  }
+  return m;
 }
 function bindOut(cheapest){
   document.querySelectorAll("[data-ppt]").forEach(b => b.onclick = async () => {
     b.disabled = true; const t = b.textContent; b.textContent = "Building…";
-    try { const m = view === 2 ? deckModel() : cardsModel();
-      if (multiOn()) m.fileName = m.fileName.replace("OCVS_Sizing_", `OCVS_Sizing_${clusterName(cur).replace(/[^\w-]+/g, "_")}_`);
+    try { const m = clusterDeckModel();
       if (view === 2) await Deck.download(m); else await Deck.downloadCards(m); } catch (e) { alert(e.message); }
     b.disabled = false; b.textContent = t; });
   document.querySelectorAll("[data-pptall]").forEach(b => b.onclick = async () => {
