@@ -51,11 +51,13 @@ Switch on **Advanced configuration** to change the commitment, hours, regions, s
 
 ## More than one cluster (optional)
 
-Switch on **Add a workload cluster** to size a second cluster in the same SDDC. Two tabs appear, **Management cluster** and **Workload cluster**, each with its own input (numbers or RVTools report), its own results and its own shape picks. Pricing, regions, storage option, discount and sizing assumptions are shared by both clusters.
+Switch on **Add workload clusters** and choose how many (1 to 14; with the management cluster that is the 15 clusters OCVS allows in an SDDC). A tab appears for the **Management cluster** and for each workload cluster. Each tab has its own input (numbers or RVTools report), its own results and its own shape picks. Pricing, regions, storage option, discount and sizing assumptions are shared by all clusters.
 
+- **Name a workload cluster** (for example Production, Non-production, Oracle databases) in the box under the tabs. The name is used on the tabs, in the consolidated table and in the PowerPoint.
 - **Download PPT (this cluster)** gives the deck for the cluster you are looking at.
-- **Download consolidated PPT** gives: slide 1 management cluster, slide 2 workload cluster, slide 3 both clusters together (each cluster's configuration, cores and RAM, and the consolidated monthly and term price), then assumptions and sources. It follows the style of the current view.
-- The page also shows a **Consolidated: both clusters** table under the results.
+- **Download consolidated PPT** gives one slide per cluster, then all clusters together (each cluster's configuration and monthly cost, total nodes, cores and RAM, and the consolidated monthly and term price), then assumptions and sources. With many clusters the list of clusters moves to its own "Cluster breakdown" slides. It follows the style of the current view.
+- The page also shows a **Consolidated** table under the results.
+- Reducing the number of clusters hides the extra ones without clearing them; raising it again brings them back.
 
 With the switch off, the tool works as a single-cluster tool.
 

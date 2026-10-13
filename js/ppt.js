@@ -39,8 +39,9 @@
     const nSec = rep.rows.filter(x => x.section).length;
     const secH = 0.24;
     // A row whose text wraps is taller, so allow for it; otherwise the table runs into the callouts.
-    const perLine = Math.floor(colW * 72 / (12 * 0.47)), perLineLabel = Math.floor(firstW * 72 / (12 * 0.52));
-    const lines = x => Math.max(Math.ceil(String(x.label).length / perLineLabel), ...x.cells.map(c => Math.ceil(String(c).length / perLine)), 1);
+    // the first data column (OCVS) is bold, so fewer characters fit on a line there
+    const perLine = Math.floor(colW * 72 / (12 * 0.47)), perLineBold = Math.floor(colW * 72 / (12 * 0.58)), perLineLabel = Math.floor(firstW * 72 / (12 * 0.52));
+    const lines = x => Math.max(Math.ceil(String(x.label).length / perLineLabel), ...x.cells.map((c, i) => Math.ceil(String(c).length / (i === 0 ? perLineBold : perLine))), 1);
     const weight = x => 1 + 0.8 * (lines(x) - 1);
     const weights = rep.rows.map(x => (x.section ? 0 : weight(x)));
     const rowH = Math.min(0.38, (tableMaxH - nSec * secH) / (1 + weights.reduce((a, b) => a + b, 0)));
@@ -261,17 +262,16 @@
     await buildCards(m).writeFile({ fileName: m.fileName });
   }
 
-  // Consolidated deck for two clusters: slide 1 management, slide 2 workload, slide 3 both together,
-  // then assumptions. m.view picks the slide style (2 = table, otherwise the card layout).
+  // Consolidated deck for several clusters: one slide per cluster, then the slide(s) for all clusters together,
+  // then assumptions. m.slides = [{ kind: "main" | "cards" | "single", model }] in order.
   function buildConsolidated(m) {
     if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load (check your internet connection).");
     const pptx = new window.PptxGenJS();
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing: consolidated";
-    const one = m.view !== 2 && m.total.cards.length === 1;   // a single cloud, card style
-    m.clusters.forEach(c => (m.view === 2 ? slideMain : one ? slideSingle : slideSolutions)(pptx, c));
-    (m.view === 2 ? slideMain : slideSolutions)(pptx, m.total);
+    const kinds = { main: slideMain, cards: slideSolutions, single: slideSingle };
+    m.slides.forEach(x => kinds[x.kind](pptx, x.model));
     slideSources(pptx, m);
     return pptx;
   }
