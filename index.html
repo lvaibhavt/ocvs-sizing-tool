@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610131355"></script>
+<script src="js/ppt.js?v=202610131408"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610131355"></script>
-<script src="data/prices.js?v=202610131355"></script>
-<script src="js/data.js?v=202610131355"></script>
+<script src="data/catalog.js?v=202610131408"></script>
+<script src="data/prices.js?v=202610131408"></script>
+<script src="js/data.js?v=202610131408"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -295,35 +295,35 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
 <main class="main">
   <section class="panel">
     <div class="clrow">
-      <label class="switch"><input type="checkbox" id="multi"><span class="sl" aria-hidden="true"></span><b>Add workload clusters</b></label>
-      <span class="wc hidden" id="wcBox"><span>How many?</span><button type="button" id="wcMinus" aria-label="One fewer workload cluster">−</button><input type="number" id="wcN" value="1" min="1" max="14" aria-label="Number of workload clusters"><button type="button" id="wcPlus" aria-label="One more workload cluster">+</button></span>
-      <label class="switch"><input type="checkbox" id="only"><span class="sl" aria-hidden="true"></span><b>OCVS only (no comparison)</b></label>
+      <label class="switch"><input autocomplete="off" type="checkbox" id="multi"><span class="sl" aria-hidden="true"></span><b>Add workload clusters</b></label>
+      <span class="wc hidden" id="wcBox"><span>How many?</span><button type="button" id="wcMinus" aria-label="One fewer workload cluster">−</button><input autocomplete="off" type="number" id="wcN" value="1" min="1" max="14" aria-label="Number of workload clusters"><button type="button" id="wcPlus" aria-label="One more workload cluster">+</button></span>
+      <label class="switch"><input autocomplete="off" type="checkbox" id="only"><span class="sl" aria-hidden="true"></span><b>OCVS only (no comparison)</b></label>
       <span class="defs">Both optional. Add up to 14 workload clusters beside the management cluster (OCVS allows 15 clusters in an SDDC) for a consolidated price. Or show Oracle Cloud VMware Solution on its own, without the other clouds.</span>
     </div>
     <div class="cltabs hidden" id="clTabs" role="tablist" aria-label="Cluster"></div>
-    <div class="clname hidden" id="clNameBox"><label for="clName">Name this cluster</label><input type="text" id="clName" maxlength="40" placeholder="e.g. Production, Non-production, Oracle databases"></div>
+    <div class="clname hidden" id="clNameBox"><label for="clName">Name this cluster</label><input autocomplete="off" type="text" id="clName" maxlength="40" placeholder="e.g. Production, Non-production, Oracle databases"></div>
     <div class="seg" role="group" aria-label="Input method">
       <button id="bMan" aria-pressed="true">Enter numbers</button>
       <button id="bRv" aria-pressed="false">Upload RVTools</button>
     </div>
 
     <div id="pMan" class="inputs">
-      <div class="tile"><label><span class="ico">⚙</span>vCPU</label><div class="row"><input type="number" id="mCpu" value="800" min="0" class="num"><span class="u">vCPU</span></div></div>
-      <div class="tile"><label><span class="ico">▦</span>Memory</label><div class="row"><input type="number" id="mRam" value="4096" min="0" class="num"><span class="u">GB</span></div></div>
-      <div class="tile"><label><span class="ico">⛁</span>Storage used</label><div class="row"><input type="number" id="mSto" value="60" min="0" step="0.1" class="num"><span class="u">TB</span></div></div>
+      <div class="tile"><label><span class="ico">⚙</span>vCPU</label><div class="row"><input autocomplete="off" type="number" id="mCpu" value="800" min="0" class="num"><span class="u">vCPU</span></div></div>
+      <div class="tile"><label><span class="ico">▦</span>Memory</label><div class="row"><input autocomplete="off" type="number" id="mRam" value="4096" min="0" class="num"><span class="u">GB</span></div></div>
+      <div class="tile"><label><span class="ico">⛁</span>Storage used</label><div class="row"><input autocomplete="off" type="number" id="mSto" value="60" min="0" step="0.1" class="num"><span class="u">TB</span></div></div>
     </div>
 
     <div id="pRv" class="hidden">
-      <div class="drop" id="drop"><b>Drop your RVTools .xlsx here</b> or click to browse<br><span style="font-size:12.5px">Read in your browser from the vInfo sheet. Nothing is uploaded.</span><input type="file" id="file" accept=".xlsx,.xls" hidden></div>
+      <div class="drop" id="drop"><b>Drop your RVTools .xlsx here</b> or click to browse<br><span style="font-size:12.5px">Read in your browser from the vInfo sheet. Nothing is uploaded.</span><input autocomplete="off" type="file" id="file" accept=".xlsx,.xls" hidden></div>
       <div class="rvopts">
-        <select id="rvPower"><option value="on">Powered-on VMs only</option><option value="all">All VMs (no templates)</option></select>
-        <select id="rvStor"><option value="inuse">Storage: In Use</option><option value="prov">Storage: Provisioned</option></select>
+        <select autocomplete="off" id="rvPower"><option value="on">Powered-on VMs only</option><option value="all">All VMs (no templates)</option></select>
+        <select autocomplete="off" id="rvStor"><option value="inuse">Storage: In Use</option><option value="prov">Storage: Provisioned</option></select>
         <span id="rvInfo" style="font-size:13px"></span>
       </div>
     </div>
 
     <div class="advrow">
-      <label class="switch"><input type="checkbox" id="adv"><span class="sl" aria-hidden="true"></span><b>Advanced configuration</b></label>
+      <label class="switch"><input autocomplete="off" type="checkbox" id="adv"><span class="sl" aria-hidden="true"></span><b>Advanced configuration</b></label>
       <span class="defs" id="defs"></span>
     </div>
 
@@ -338,9 +338,9 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
     <div class="drawer hidden" id="dP">
       <div class="dhead"><b>Pricing &amp; regions</b><button class="link" data-reset="p">Reset to defaults</button></div>
       <div class="fgrid">
-        <div class="field"><label>Commitment</label><select id="term"><option value="3yr">3-year, monthly payments</option><option value="1yr">1-year, monthly payments</option><option value="od">On-demand</option></select></div>
-        <div class="field"><label>Hours per month</label><input type="number" id="hours" value="744" min="672" max="744"></div>
-        <div class="field"><label>Amazon EVS EC2 basis</label><select id="evsBasis"><option value="instance">Standard instance</option><option value="host">Dedicated Host</option></select></div>
+        <div class="field"><label>Commitment</label><select autocomplete="off" id="term"><option value="3yr">3-year, monthly payments</option><option value="1yr">1-year, monthly payments</option><option value="od">On-demand</option></select></div>
+        <div class="field"><label>Hours per month</label><input autocomplete="off" type="number" id="hours" value="744" min="672" max="744"></div>
+        <div class="field"><label>Amazon EVS EC2 basis</label><select autocomplete="off" id="evsBasis"><option value="instance">Standard instance</option><option value="host">Dedicated Host</option></select></div>
       </div>
       <div class="pgrid" id="provSel"></div>
     </div>
@@ -360,14 +360,14 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
     <div class="drawer hidden" id="dA">
       <div class="dhead"><b>Sizing assumptions</b><button class="link" data-reset="a">Reset to defaults</button></div>
       <div class="fgrid">
-        <div class="field"><label>vCPU/physical core overcommit (1x = none)</label><input type="number" id="aRatio" value="4" min="1" step="0.5"></div>
-        <div class="field"><label>RAM overcommit (1x = none)</label><input type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
-        <div class="field"><label>Growth buffer %</label><input type="number" id="aGrowth" value="0" min="0"></div>
-        <div class="field"><label>Host RAM reserved %</label><input type="number" id="aRamRes" value="0" min="0" max="50"></div>
-        <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="0">None</option><option value="1">N+1</option><option value="2">N+2</option></select></div>
-        <div class="field"><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33×)</option><option value="r1">RAID-1 FTT=1 (2×)</option><option value="r6">RAID-6 FTT=2 (1.5×)</option></select></div>
-        <div class="field"><label>Free-space headroom %</label><input type="number" id="aSlack" value="0" min="0" max="50"></div>
-        <div class="field"><label>vSAN dedup/compression (1x = none)</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
+        <div class="field"><label>vCPU/physical core overcommit (1x = none)</label><input autocomplete="off" type="number" id="aRatio" value="4" min="1" step="0.5"></div>
+        <div class="field"><label>RAM overcommit (1x = none)</label><input autocomplete="off" type="number" id="aRamOc" value="1" min="1" step="0.1"></div>
+        <div class="field"><label>Growth buffer %</label><input autocomplete="off" type="number" id="aGrowth" value="0" min="0"></div>
+        <div class="field"><label>Host RAM reserved %</label><input autocomplete="off" type="number" id="aRamRes" value="0" min="0" max="50"></div>
+        <div class="field"><label>HA spare hosts</label><select autocomplete="off" id="aHa"><option value="0">None</option><option value="1">N+1</option><option value="2">N+2</option></select></div>
+        <div class="field"><label>vSAN policy</label><select autocomplete="off" id="aPol"><option value="r5">RAID-5 FTT=1 (1.33×)</option><option value="r1">RAID-1 FTT=1 (2×)</option><option value="r6">RAID-6 FTT=2 (1.5×)</option></select></div>
+        <div class="field"><label>Free-space headroom %</label><input autocomplete="off" type="number" id="aSlack" value="0" min="0" max="50"></div>
+        <div class="field"><label>vSAN dedup/compression (1x = none)</label><input autocomplete="off" type="number" id="aDedup" value="1" min="1" step="0.1"></div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. vSAN policy, free-space headroom and dedup/compression apply to vSAN only; additional storage such as OCI Block Volume is sized at the capacity needed. Click the <b>i</b> beside a setting for what it means.</p>
     </div>
@@ -449,7 +449,17 @@ const PKEYS = ["term","hours","evsBasis"], AKEYS = ["aRatio","aRamOc","aGrowth",
 const LBL = {term:v=>({"3yr":"3-yr","1yr":"1-yr",od:"On-demand"}[v]),hours:v=>v+" h/mo",evsBasis:v=>v==="host"?"EVS Dedicated Host":"EVS instance",
   aRatio:v=>v+"x vCPU/core overcommit",aRamOc:v=>v+"x RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
   aHa:v=>v==="0"?"no HA spare":"N+"+v,aPol:v=>POL[v].l,aSlack:v=>v+"% free space",aDedup:v=>v==="1"?"no dedup":v+"× dedup"};
-const changed = k => String($(k).value) !== DEF[k];
+// The value actually used for a setting. Overcommit and dedup must be at least 1 and hours above 0; a blank,
+// zero or negative entry there means "use the default", so the sizing and the labels can never disagree.
+const AT_LEAST_1 = ["aRatio", "aRamOc", "aDedup"], PERCENT = ["aGrowth", "aRamRes", "aSlack"];
+function eff(k){
+  const raw = $(k).value, n = +raw;
+  if (AT_LEAST_1.includes(k)) return raw !== "" && n >= 1 ? String(n) : DEF[k];
+  if (k === "hours") return raw !== "" && n > 0 ? String(n) : DEF.hours;
+  if (PERCENT.includes(k)) return raw !== "" && n >= 0 ? String(n) : "0";
+  return String(raw);
+}
+const changed = k => eff(k) !== DEF[k];
 const ocvsOnly = () => $("only").checked;
 const activeClouds = () => ocvsOnly() ? ["ocvs"] : ORDER;
 
@@ -458,11 +468,11 @@ function buildProvSel(){
     const pr = P.providers[p];
     const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
     return `<div class="pbox" data-p="${p}" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
-      <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div></div>`;
+      <div class="field" id="f_reg_${p}"><label>Region</label><select autocomplete="off" id="reg_${p}">${regs}</select></div></div>`;
   }).join("");
   $("stoSel").innerHTML = ORDER.map(p => `<div class="sbox" data-p="${p}" style="border-color:${COLOR[p]}"><b style="font-size:13px">${P.providers[p].longName}</b>
-      <div class="field" id="f_st_${p}"><label>Option</label><select id="st_${p}"></select></div><div class="sdet" id="sd_${p}"></div></div>`).join("");
-  $("discSel").innerHTML = ORDER.map(p => `<div class="field" data-p="${p}" id="f_disc_${p}"><label>${P.providers[p].longName} %</label><input type="number" id="disc_${p}" value="0" min="0" max="100" step="1"></div>`).join("");
+      <div class="field" id="f_st_${p}"><label>Option</label><select autocomplete="off" id="st_${p}"></select></div><div class="sdet" id="sd_${p}"></div></div>`).join("");
+  $("discSel").innerHTML = ORDER.map(p => `<div class="field" data-p="${p}" id="f_disc_${p}"><label>${P.providers[p].longName} %</label><input autocomplete="off" type="number" id="disc_${p}" value="0" min="0" max="100" step="1"></div>`).join("");
   ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; $("disc_"+p).oninput = update; fillStorage(p); });
 }
 function fillStorage(p){
@@ -505,7 +515,7 @@ function baseStorageText(hours){
 const regionName = (p, id) => (P.providers[p].regions.find(r => r.id === id) || {name:id}).name;
 const links = o => (o.links || []).length ? `<p class="lk">${o.links.map(([l,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(" · ")}</p>` : "";
 function summaries(){
-  const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k]($(k).value)}</i>` : LBL[k]($(k).value));
+  const sum = keys => keys.map(k => changed(k) ? `<i>${LBL[k](eff(k))}</i>` : LBL[k](eff(k)));
   const regChg = ORDER.filter(p => $("reg_"+p).value !== P.providers[p].defaultRegion).length;
   $("sumP").innerHTML = [...sum(["term","hours"]), regChg ? `<i>${regChg} region${regChg>1?"s":""} changed</i>` : "Frankfurt"].join(" · ");
   const stChg = ORDER.filter(p => $("st_"+p).value !== "auto").length;
@@ -514,7 +524,7 @@ function summaries(){
   $("sumD").innerHTML = dChg.length ? dChg.map(p => `<i>${P.providers[p].name} ${+$("disc_"+p).value}%</i>`).join(" · ") : "none";
   ORDER.forEach(p => $("f_disc_"+p).classList.toggle("chg", !!+$("disc_"+p).value));
   ORDER.forEach(p => $("f_st_"+p).classList.toggle("chg", $("st_"+p).value !== "auto"));
-  const hours = +$("hours").value || 744;
+  const hours = +eff("hours");
   ORDER.forEach(p => $("sd_"+p).innerHTML = storageDetails(p, hours, $("term").value));
   $("defs").innerHTML = $("adv").checked ? "Change any setting below; changed values are highlighted."
     : `Using defaults: <b>3-year monthly</b> · <b>744 h/mo</b> · <b>Frankfurt</b> · <b>4x vCPU/core overcommit</b> · <b>1x RAM overcommit (none)</b> · RAID-5 · no growth, HA spare or free-space buffer.<br>Base storage configuration considered: ${baseStorageText(hours)}`;
@@ -676,8 +686,8 @@ function priceShape(s,req,a,ctx){
   if (!best) return {s, need, plan:cands[0], na:"No price for the chosen storage in this region / term"};
   return {s, need, rate, plan:best};
 }
-function assumptions(){ return {ratio:+$("aRatio").value||4, ramOc:+$("aRamOc").value||1, growth:(+$("aGrowth").value||0)/100,
-  ramRes:(+$("aRamRes").value||0)/100, ha:+$("aHa").value, pol:$("aPol").value, slack:Math.min(.9,(+$("aSlack").value||0)/100), dedup:+$("aDedup").value||1}; }
+function assumptions(){ return {ratio:+eff("aRatio"), ramOc:+eff("aRamOc"), growth:+eff("aGrowth")/100,
+  ramRes:Math.min(.9, +eff("aRamRes")/100), ha:+$("aHa").value, pol:$("aPol").value, slack:Math.min(.9, +eff("aSlack")/100), dedup:+eff("aDedup")}; }
 
 // ---------- render ----------
 let pick = {}, openDrill = null, last = null;
@@ -765,7 +775,7 @@ function update(){
 function compute(base, pk){
   const a = assumptions(), g = 1 + a.growth;
   const req = {cpu:base.cpu*g, ram:base.ram*g, sto:base.sto*g};
-  const term = $("term").value, hours = +$("hours").value || 744, ctx = {term, hours};
+  const term = $("term").value, hours = +eff("hours"), ctx = {term, hours};
   for (const p of ORDER) {
     const region = $("reg_"+p).value, rates = {};
     for (const s of Calc.listShapes(P, p, region, {evsBasis:$("evsBasis").value})) rates[s.id] = s.rates;
@@ -788,12 +798,12 @@ function render(){
   const ranked = ORDER.filter(p => shown[p]).sort((x,y) => shown[x].plan.total - shown[y].plan.total);
   const rpc = req.cpu ? req.ram/req.cpu : 0, spc = req.cpu ? req.sto*1000/req.cpu : 0;
   const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
-  const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
+  const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k](eff(k))}</span>`).join("");
 
   const disc = activeClouds().filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
   const clName = multiOn() ? esc(clusterFull(cur)) + ": " : "";
   const pptBtns = `<div class="btns"><button class="pptb" data-ppt>${multiOn() ? "Download PPT (this cluster)" : "Download PPT"}</button>${multiOn() ? `<button class="pptb alt" data-pptall>Download consolidated PPT</button>` : ""}</div>`;
-  let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+$("aGrowth").value ? `After ${$("aGrowth").value}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
+  let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+eff("aGrowth") ? `After ${eff("aGrowth")}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span></div>
    <div class="req" style="margin-top:8px">${used}${disc}</div>`;
 
@@ -1061,12 +1071,12 @@ function deckModel(){
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
-    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+$("aGrowth").value ? ` (after ${$("aGrowth").value}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+eff("aGrowth") ? ` (after ${eff("aGrowth")}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
       ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${activeClouds().some(p => ctx[p].disc) ? " Discounts on hosts and storage: " + activeClouds().filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
-      ["Sizing", [LBL.aRatio($("aRatio").value), LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
+      ["Sizing", [LBL.aRatio(eff("aRatio")), LBL.aRamOc(eff("aRamOc")), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k](eff(k)))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
     ],
@@ -1204,6 +1214,23 @@ $("sources").innerHTML = `
    </ul></div>
   </div>
   <p class="lead" style="margin-top:14px"><b>Units:</b> 1 TB = 1,024 GB for all storage pricing, as in the vendor calculators. Monthly price = hourly rate × hours per month (744 by default).</p>`;
+// Start every page load from the defaults. Browsers can put old values back into the fields after a refresh
+// (and, when the page has changed since, into the wrong fields), so reset every control to what the page defines.
+function resetControls(){
+  let touched = false;
+  document.querySelectorAll("input, select").forEach(el => {
+    if (el.type === "file") return;
+    if (el.type === "checkbox") { if (el.checked !== el.defaultChecked) { el.checked = el.defaultChecked; touched = true; } }
+    else if (el.tagName === "SELECT") { const d = Math.max(0, [...el.options].findIndex(o => o.defaultSelected)); if (el.selectedIndex !== d) { el.selectedIndex = d; touched = true; } }
+    else if (el.value !== el.defaultValue) { el.value = el.defaultValue; touched = true; }
+  });
+  return touched;
+}
+resetControls();
+// a restore that happens after this script has run (back/forward cache, late form restore) is caught here
+window.addEventListener("pageshow", () => { if (!window.__started) { window.__started = true; if (resetControls()) { $("advBox").classList.add("hidden"); document.body.classList.remove("only-ocvs"); ORDER.forEach(fillStorage); update(); } } });
+[...AT_LEAST_1, ...PERCENT, "hours"].forEach(k => $(k).addEventListener("change", () => { if ($(k).value !== eff(k)) { $(k).value = eff(k); update(); } }));
+
 setView(view);
 update();
 </script>
