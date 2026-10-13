@@ -37,11 +37,15 @@
     const tableTop = 1.75 + D;
     const tableMaxH = (rep.callouts.length ? 5.75 : 6.6) - D;
     const nSec = rep.rows.filter(x => x.section).length;
-    const nData = rep.rows.length - nSec + 1;
     const secH = 0.24;
-    const rowH = Math.min(0.38, (tableMaxH - nSec * secH) / nData);
+    // A row whose text wraps is taller, so allow for it; otherwise the table runs into the callouts.
+    const perLine = Math.floor(colW * 72 / (12 * 0.47)), perLineLabel = Math.floor(firstW * 72 / (12 * 0.52));
+    const lines = x => Math.max(Math.ceil(String(x.label).length / perLineLabel), ...x.cells.map(c => Math.ceil(String(c).length / perLine)), 1);
+    const weight = x => 1 + 0.8 * (lines(x) - 1);
+    const weights = rep.rows.map(x => (x.section ? 0 : weight(x)));
+    const rowH = Math.min(0.38, (tableMaxH - nSec * secH) / (1 + weights.reduce((a, b) => a + b, 0)));
     const fs = rowH >= 0.34 ? 13 : rowH >= 0.3 ? 12 : 11;
-    const heights = [rowH, ...rep.rows.map(x => (x.section ? secH : rowH))];
+    const heights = [rowH, ...rep.rows.map((x, i) => (x.section ? secH : rowH * weights[i]))];
     const tableH = heights.reduce((a, b) => a + b, 0);
 
     const rows = [];
@@ -80,7 +84,7 @@
         const x = M + i * (cw + gap);
         s.addShape(pptx.ShapeType.roundRect, { x, y: cy, w: cw, h: 0.95, rectRadius: 0.08, fill: { color: co.positive ? C.calloutBg : C.calloutBgNeg }, line: { color: co.positive ? C.calloutLine : C.calloutLineNeg, width: 1 } });
         s.addText([
-          { text: co.title, options: { fontFace: HEAD, fontSize: rep.callouts.length > 2 ? 22 : 24, bold: true, color: co.positive ? C.green : C.red, breakLine: true } },
+          { text: co.title, options: { fontFace: HEAD, fontSize: rep.callouts.length > 2 ? (co.title.length > 20 ? 18 : 22) : 24, bold: true, color: co.positive ? C.green : C.red, breakLine: true } },
           { text: co.sub, options: { fontFace: BODY, fontSize: 14, color: C.body } }
         ], { x: x + 0.25, y: cy + 0.05, w: cw - 0.4, h: 0.85, valign: "middle", margin: 0, isTextBox: true });
       });

@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610131230"></script>
+<script src="js/ppt.js?v=202610131235"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610131230"></script>
-<script src="data/prices.js?v=202610131230"></script>
-<script src="js/data.js?v=202610131230"></script>
+<script src="data/catalog.js?v=202610131235"></script>
+<script src="data/prices.js?v=202610131235"></script>
+<script src="js/data.js?v=202610131235"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -757,7 +757,7 @@ function render(){
   if (view === 2) { $("out").innerHTML = h + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
-  h += `<div class="sec"><div><h2>${clName}Result</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div>${pptBtns}</div>
+  h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div>${pptBtns}</div>
    <div class="winner" style="--wc:${COLOR[w]}"><div>
      <div class="t">Lowest cost</div>
      <div class="h">${P.providers[w].longName}</div>
@@ -1021,7 +1021,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   const save = (r, p, mult) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * mult;
     return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
-  let h = `<section class="t2"><div class="t2head"><div><h2>${clName}Comparison</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${pptBtns}</div>
+  let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${pptBtns}</div>
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${sec("Configuration")}
   ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
