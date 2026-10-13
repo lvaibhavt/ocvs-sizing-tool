@@ -187,15 +187,15 @@
     T(m.subhead, { x: M, y: 1.52, w: W - 2 * M, h: 0.35, fontSize: 13, color: K.muted });
 
     const cy = 2.1, ch = H - cy - 0.75, n = m.cards.length, gap = 0.25;
-    const cw = (W - 2 * M - gap * (n - 1)) / n;
+    const cw = n === 1 ? 7.5 : (W - 2 * M - gap * (n - 1)) / n, x0 = n === 1 ? (W - cw) / 2 : M;
     m.cards.forEach((c, i) => {
-      const x = M + i * (cw + gap), best = c.rank === 1;
+      const x = x0 + i * (cw + gap), best = c.rank === 1;
       s.addShape(pptx.ShapeType.rect, { x, y: cy, w: cw, h: ch, fill: { color: "FFFFFF" }, line: { color: best ? c.color : K.line, width: best ? 2 : 1 } });
       s.addShape(pptx.ShapeType.rect, { x, y: cy, w: cw, h: 0.75, fill: { color: c.color }, line: { color: c.color } });
       T(c.name, { x: x + 0.2, y: cy + 0.05, w: cw - 0.4, h: 0.65, fontSize: 14, bold: true, color: "FFFFFF", valign: "middle", fit: "shrink" });
       if (best) {
         s.addShape(pptx.ShapeType.rect, { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fill: { color: K.good }, line: { color: K.good } });
-        T("LOWEST COST", { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle", charSpacing: 1 });
+        T(m.bestLabel || "LOWEST COST", { x: x + cw - 1.55, y: cy - 0.18, w: 1.4, h: 0.34, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle", charSpacing: 1 });
       }
       c.rows.forEach(([l, v], k) => {
         const rowH = m.rowH || 0.78, y = cy + 0.95 + k * rowH;
@@ -211,14 +211,48 @@
     T(m.notes2.join("   "), { x: M, y: H - 0.55, w: W - 2 * M, h: 0.45, fontSize: 9, color: K.muted, valign: "top", fit: "shrink" });
   }
 
+  // One cloud only (no comparison): the requirement on the left, the recommended configuration and price on the right
+  function slideSingle(pptx, m) {
+    const s = pptx.addSlide(), c = m.cards[0];
+    s.background = { color: "FFFFFF" };
+    banner(pptx, s);
+    const T = (t, o) => s.addText(t, { fontFace: F, margin: 0, isTextBox: true, ...o });
+    T(m.eyebrow || "SIZING & PRICING", { x: M, y: 0.6, w: 10, h: 0.3, fontSize: 12, bold: true, color: c.color, charSpacing: 3 });
+    T(m.headline, { x: M, y: 0.92, w: W - 2 * M, h: 0.7, fontSize: 26, bold: true, color: K.text, fit: "shrink" });
+    T(m.subhead, { x: M, y: 1.62, w: W - 2 * M, h: 0.35, fontSize: 14, color: K.muted });
+
+    const py = 2.25, ph = H - py - 0.75, lw = 4.3;
+    s.addShape(pptx.ShapeType.roundRect, { x: M, y: py, w: lw, h: ph, rectRadius: 0.1, fill: { color: K.soft }, line: { color: K.soft } });
+    T(m.reqLabel || "YOUR REQUIREMENT", { x: M + 0.3, y: py + 0.25, w: lw - 0.6, h: 0.3, fontSize: 11, bold: true, color: K.muted, charSpacing: 2 });
+    m.req.forEach(([v, l], i) => T([{ text: v, options: { fontSize: 34, bold: true, color: K.text, breakLine: true } }, { text: l, options: { fontSize: 13, color: K.muted } }],
+      { x: M + 0.3, y: py + 0.8 + i * 1.25, w: lw - 0.6, h: 1.05 }));
+
+    const rx = M + lw + 0.5, rw = W - M - rx, half = (rw - 0.6) / 2;
+    s.addShape(pptx.ShapeType.rect, { x: rx, y: py, w: rw, h: ph, fill: { color: "FFFFFF" }, line: { color: c.color, width: 2 } });
+    s.addShape(pptx.ShapeType.rect, { x: rx, y: py, w: rw, h: 0.75, fill: { color: c.color }, line: { color: c.color } });
+    T(c.name, { x: rx + 0.3, y: py + 0.05, w: rw - 2.4, h: 0.65, fontSize: 17, bold: true, color: "FFFFFF", valign: "middle" });
+    T(m.bestLabel || "RECOMMENDED", { x: rx + rw - 2.0, y: py + 0.2, w: 1.7, h: 0.36, fontSize: 10.5, bold: true, color: c.color, fill: { color: "FFFFFF" }, align: "center", valign: "middle", charSpacing: 1 });
+    // first row (the configuration) spans the card; the rest sit two to a line
+    const [first, ...rest] = c.rows;
+    T([{ text: first[0].toUpperCase(), options: { fontSize: 10, bold: true, color: K.muted, charSpacing: 1, breakLine: true } }, { text: first[1], options: { fontSize: 20, bold: true, color: K.text } }],
+      { x: rx + 0.3, y: py + 1.0, w: rw - 0.6, h: 0.95, valign: "top", fit: "shrink" });
+    rest.forEach(([l, v], k) => T([{ text: l.toUpperCase(), options: { fontSize: 10, bold: true, color: K.muted, charSpacing: 1, breakLine: true } }, { text: v, options: { fontSize: 14, color: K.text } }],
+      { x: rx + 0.3 + (k % 2) * (half + 0.0), y: py + 2.15 + Math.floor(k / 2) * 1.0, w: half - 0.2, h: 0.9, valign: "top", fit: "shrink" }));
+    const fh = 1.45, fy = py + ph - fh;
+    s.addShape(pptx.ShapeType.rect, { x: rx + 0.02, y: fy, w: rw - 0.04, h: fh - 0.02, fill: { color: "FBEAE7" }, line: { color: "FBEAE7" } });
+    T([{ text: c.price, options: { fontSize: 36, bold: true, color: K.text } }, { text: "  per month", options: { fontSize: 13, color: K.muted, breakLine: true } },
+       { text: c.term, options: { fontSize: 14, color: K.text } }], { x: rx + 0.3, y: fy + 0.1, w: rw - 0.6, h: fh - 0.2, valign: "middle" });
+    T(m.notes2.join("   "), { x: M, y: H - 0.55, w: W - 2 * M, h: 0.45, fontSize: 9, color: K.muted, valign: "top", fit: "shrink" });
+  }
+
   function buildCards(m) {
     if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load (check your internet connection).");
     const pptx = new window.PptxGenJS();
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing";
-    slideSummary(pptx, m);
-    slideSolutions(pptx, m);
+    if (m.cards.length === 1) slideSingle(pptx, m);
+    else { slideSummary(pptx, m); slideSolutions(pptx, m); }
     slideSources(pptx, m);
     return pptx;
   }
@@ -235,9 +269,9 @@
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing: consolidated";
-    const slide = m.view === 2 ? slideMain : slideSolutions;
-    m.clusters.forEach(c => slide(pptx, c));
-    slide(pptx, m.total);
+    const one = m.view !== 2 && m.total.cards.length === 1;   // a single cloud, card style
+    m.clusters.forEach(c => (m.view === 2 ? slideMain : one ? slideSingle : slideSolutions)(pptx, c));
+    (m.view === 2 ? slideMain : slideSolutions)(pptx, m.total);
     slideSources(pptx, m);
     return pptx;
   }

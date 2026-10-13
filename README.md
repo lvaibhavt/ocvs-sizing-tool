@@ -59,6 +59,14 @@ Switch on **Add a workload cluster** to size a second cluster in the same SDDC. 
 
 With the switch off, the tool works as a single-cluster tool.
 
+## OCVS only (optional)
+
+Switch on **OCVS only (no comparison)** to size and price Oracle Cloud VMware Solution on its own. The other clouds disappear from the results, the settings, the consolidated table and the PowerPoint decks. It works with one cluster or with the workload cluster switched on.
+
+## Help on every setting
+
+Under **Advanced configuration**, each setting has an **i** button with a short explanation and a worked example (for instance: a 30% growth buffer turns 800 vCPU, 4,096 GB and 60 TB into 1,040 vCPU, 5,325 GB and 78 TB). vSAN policy, free-space headroom and dedup/compression apply to vSAN only; additional storage such as OCI Block Volume is sized at the capacity needed.
+
 ## How to use it
 
 1. Choose one input method:
@@ -82,7 +90,7 @@ With the switch off, the tool works as a single-cluster tool.
 - Storage hosts = storage ÷ (raw TB × (1 − slack) ÷ policy factor × dedup), rounded up. If the cluster is too small for RAID-5 or RAID-6, RAID-1 is used instead.
 - Hosts = max(compute hosts, storage hosts, provider minimum). The minimum is 3 hosts on OCVS, AVS and GCVE, and 4 on EVS.
 - **Additional storage is an explicit choice per cloud** (Pricing toggle). The default is *None*: all storage on vSAN, adding hosts until it fits.
-- If you pick an option (OCI Block Volume, Azure Elastic SAN or NetApp Files, Google NetApp Volumes or Filestore, Amazon FSx for ONTAP, or **GCVE storage-only vSAN nodes**), hosts are sized for compute and the rest of the storage goes there, with the same free-space headroom.
+- If you pick an option (OCI Block Volume, Azure Elastic SAN or NetApp Files, Google NetApp Volumes or Filestore, Amazon FSx for ONTAP, or **GCVE storage-only vSAN nodes**), hosts are sized for compute and the rest of the storage goes there, at the capacity needed (free-space headroom is a vSAN setting and is not added to it).
 - GCVE storage-only nodes match the ve2 size class (e.g. `ve2-mega-so` with `ve2-mega-*`), are at most 50% of the cluster, and use the same commitment term as the hosts.
 - Shapes with no local vSAN (such as OCVS Standard shapes) are only sized when additional storage is chosen.
 - The recommended shape per cloud is the cheapest total. Shapes without a published price for the region and commitment are skipped.

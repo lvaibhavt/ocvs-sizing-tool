@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610131235"></script>
+<script src="js/ppt.js?v=202610131253"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610131235"></script>
-<script src="data/prices.js?v=202610131235"></script>
-<script src="js/data.js?v=202610131235"></script>
+<script src="data/catalog.js?v=202610131253"></script>
+<script src="data/prices.js?v=202610131253"></script>
+<script src="js/data.js?v=202610131253"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -267,6 +267,14 @@ table.cons td{text-align:right;vertical-align:top}
 table.cons tbody th{background:none;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);vertical-align:top}
 table.cons tbody tr{cursor:default}
 table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
+.lbl{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.lbl label{margin:0}
+.info{flex:none;width:17px;height:17px;border-radius:50%;border:1px solid var(--muted);background:transparent;color:var(--muted);font:italic 700 11px/1 Georgia,serif;cursor:pointer;padding:0;vertical-align:middle}
+.info:hover,.info[aria-expanded="true"]{background:var(--text);border-color:var(--text);color:var(--card)}
+.help{margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--line);font-size:12.5px;line-height:1.45;color:var(--text);font-weight:400}
+.dhead + .help{margin:0 0 12px}
+.only-ocvs [data-p]:not([data-p="ocvs"]){display:none}
+.only-ocvs .sgrid2 .sc:not(:first-child){display:none}
 </style>
 </head>
 <body>
@@ -282,7 +290,8 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
   <section class="panel">
     <div class="clrow">
       <label class="switch"><input type="checkbox" id="multi"><span class="sl" aria-hidden="true"></span><b>Add a workload cluster</b></label>
-      <span class="defs">Optional. Size a second cluster in the same SDDC and get a consolidated price for both.</span>
+      <label class="switch"><input type="checkbox" id="only"><span class="sl" aria-hidden="true"></span><b>OCVS only (no comparison)</b></label>
+      <span class="defs">Both optional. Add a second cluster in the same SDDC for a consolidated price. Or show Oracle Cloud VMware Solution on its own, without the other clouds.</span>
     </div>
     <div class="cltabs hidden" id="clTabs" role="tablist" aria-label="Cluster">
       <button role="tab" data-cl="mgmt" aria-selected="true"><b>Management cluster</b><span id="clS_mgmt"></span></button>
@@ -353,9 +362,9 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
         <div class="field"><label>HA spare hosts</label><select id="aHa"><option value="0">None</option><option value="1">N+1</option><option value="2">N+2</option></select></div>
         <div class="field"><label>vSAN policy</label><select id="aPol"><option value="r5">RAID-5 FTT=1 (1.33×)</option><option value="r1">RAID-1 FTT=1 (2×)</option><option value="r6">RAID-6 FTT=2 (1.5×)</option></select></div>
         <div class="field"><label>Free-space headroom %</label><input type="number" id="aSlack" value="0" min="0" max="50"></div>
-        <div class="field"><label>vSAN dedup/compression</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
+        <div class="field"><label>vSAN dedup/compression (1x = none)</label><input type="number" id="aDedup" value="1" min="1" step="0.1"></div>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. HA spares add compute only. Headroom is kept free on vSAN and on external datastores.</p>
+      <p style="font-size:12px;color:var(--muted);margin:12px 0 0">RAID-5 needs 4 hosts and RAID-6 needs 6; smaller clusters fall back to RAID-1. vSAN policy, free-space headroom and dedup/compression apply to vSAN only; additional storage such as OCI Block Volume is sized at the capacity needed. Click the <b>i</b> beside a setting for what it means.</p>
     </div>
     </div>
   </section>
@@ -436,17 +445,19 @@ const LBL = {term:v=>({"3yr":"3-yr","1yr":"1-yr",od:"On-demand"}[v]),hours:v=>v+
   aRatio:v=>v+"x vCPU/core overcommit",aRamOc:v=>v+"x RAM overcommit",aGrowth:v=>"+"+v+"% growth",aRamRes:v=>v+"% RAM reserved",
   aHa:v=>v==="0"?"no HA spare":"N+"+v,aPol:v=>POL[v].l,aSlack:v=>v+"% free space",aDedup:v=>v==="1"?"no dedup":v+"× dedup"};
 const changed = k => String($(k).value) !== DEF[k];
+const ocvsOnly = () => $("only").checked;
+const activeClouds = () => ocvsOnly() ? ["ocvs"] : ORDER;
 
 function buildProvSel(){
   $("provSel").innerHTML = ORDER.map(p => {
     const pr = P.providers[p];
     const regs = pr.regions.map(r => `<option value="${esc(r.id)}"${r.id === pr.defaultRegion ? " selected" : ""}>${esc(r.name)}</option>`).join("");
-    return `<div class="pbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
+    return `<div class="pbox" data-p="${p}" style="border-color:${COLOR[p]}"><b style="font-size:13px">${pr.longName}</b>
       <div class="field" id="f_reg_${p}"><label>Region</label><select id="reg_${p}">${regs}</select></div></div>`;
   }).join("");
-  $("stoSel").innerHTML = ORDER.map(p => `<div class="sbox" style="border-color:${COLOR[p]}"><b style="font-size:13px">${P.providers[p].longName}</b>
+  $("stoSel").innerHTML = ORDER.map(p => `<div class="sbox" data-p="${p}" style="border-color:${COLOR[p]}"><b style="font-size:13px">${P.providers[p].longName}</b>
       <div class="field" id="f_st_${p}"><label>Option</label><select id="st_${p}"></select></div><div class="sdet" id="sd_${p}"></div></div>`).join("");
-  $("discSel").innerHTML = ORDER.map(p => `<div class="field" id="f_disc_${p}"><label>${P.providers[p].longName} %</label><input type="number" id="disc_${p}" value="0" min="0" max="100" step="1"></div>`).join("");
+  $("discSel").innerHTML = ORDER.map(p => `<div class="field" data-p="${p}" id="f_disc_${p}"><label>${P.providers[p].longName} %</label><input type="number" id="disc_${p}" value="0" min="0" max="100" step="1"></div>`).join("");
   ORDER.forEach(p => { $("reg_"+p).onchange = () => { fillStorage(p); update(); }; $("st_"+p).onchange = update; $("disc_"+p).oninput = update; fillStorage(p); });
 }
 function fillStorage(p){
@@ -482,7 +493,7 @@ function storageDetails(p, hours, term){
     ${t.desc ? `<p>${esc(t.desc)}</p>` : ""}<ul>${(o.notes || []).slice(0,2).map(n => `<li>${esc(n)}</li>`).join("")}</ul>${links(o)}`;
 }
 function baseStorageText(hours){
-  return ORDER.map(p => { const c = cheapestChoice(p, P.providers[p].defaultRegion, hours);
+  return activeClouds().map(p => { const c = cheapestChoice(p, P.providers[p].defaultRegion, hours);
     const t = c ? `${c.name} ${c.tier}` : "vSAN only";
     return `<b>${P.providers[p].name}</b> ${esc(t)}${p === "gcve" ? " or storage-only vSAN nodes" : ""}`; }).join(" · ");
 }
@@ -599,7 +610,7 @@ function size(s,req,a){
   }
   const hosts = Math.max(compute, s.min), u = s.raw ? vsanUsable(s,hosts,a) : {per:0, pol:"–"};
   const deficit = Math.max(0, req.sto - hosts*u.per);
-  if (deficit > 0) plans.push({kind:"ext", hosts, usable:hosts*u.per, pol:u.pol, ext:deficit/(1-a.slack),
+  if (deficit > 0) plans.push({kind:"ext", hosts, usable:hosts*u.per, pol:u.pol, ext:deficit,
     driver: hosts > compute ? "Minimum" : (cpuN >= ramN ? "CPU" : "RAM")});
   // GCVE: extra vSAN capacity from storage-only nodes of the same ve2 size class,
   // at most 50% of the cluster (so never more storage-only nodes than HCI nodes)
@@ -730,7 +741,7 @@ function compute(base, pk){
   }
   const results = SHAPES.map(s => priceShape(s, req, a, ctx));
   const by = {}, cheapest = {}, shown = {};
-  for (const p of ORDER) {
+  for (const p of activeClouds()) {
     by[p] = results.filter(r => r.s.p === p).sort((x,y) => (x.na?1:0)-(y.na?1:0) || (x.plan.total||0)-(y.plan.total||0) || x.plan.hosts-y.plan.hosts);
     cheapest[p] = by[p].find(r => !r.na);
     shown[p] = by[p].find(r => r.s.id === pk[p] && !r.na) || cheapest[p];
@@ -746,7 +757,7 @@ function render(){
   const profile = spc > 150 ? "Storage-heavy" : rpc > 8 ? "Memory-heavy" : rpc < 3 ? "CPU-heavy" : "Balanced";
   const used = [...PKEYS, ...AKEYS].filter(k => k !== "evsBasis" && (changed(k) || ["term","hours","aRatio","aRamOc","aPol"].includes(k))).map(k => `<span class="pill${changed(k)?" chg":""}">${LBL[k]($(k).value)}</span>`).join("");
 
-  const disc = ORDER.filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
+  const disc = activeClouds().filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
   const clName = multiOn() ? CL[cur] + ": " : "";
   const pptBtns = `<div class="btns"><button class="pptb" data-ppt>${multiOn() ? "Download PPT (this cluster)" : "Download PPT"}</button>${multiOn() ? `<button class="pptb alt" data-pptall>Download consolidated PPT</button>` : ""}</div>`;
   let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+$("aGrowth").value ? `After ${$("aGrowth").value}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
@@ -759,14 +770,14 @@ function render(){
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
   h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div>${pptBtns}</div>
    <div class="winner" style="--wc:${COLOR[w]}"><div>
-     <div class="t">Lowest cost</div>
+     <div class="t">${ranked.length > 1 ? "Lowest cost" : "Sized and priced"}</div>
      <div class="h">${P.providers[w].longName}</div>
      <div class="s">${wr.plan.hosts} × ${esc(wr.s.label)}${wr.plan.kind === "so" ? ` + ${wr.plan.so} × ${wr.plan.soId} storage-only` : wr.plan.ext ? ` + ${wr.plan.ext.toFixed(0)} TB ${esc(ctx[w].storage.name)}` : ""}${second ? ` · <b class="down">${Math.round((1-wr.plan.total/second.plan.total)*100)}% less</b> than ${P.providers[ranked[1]].name}` : ""}</div>
    </div><div class="big num">${money(wr.plan.total)}<small>per month · ${kmoney(wr.plan.total*months)} over ${months} months</small></div></div>
-   <div class="panel" style="margin-top:16px;padding:18px 20px"><div class="bars">${ranked.map(p => `<div class="bar"><span><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}</span>
+   <div class="panel${ranked.length > 1 ? "" : " hidden"}" style="margin-top:16px;padding:18px 20px"><div class="bars">${ranked.map(p => `<div class="bar"><span><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}</span>
      <div class="tr"><div class="fl" style="width:${shown[p].plan.total/max*100}%;background:${COLOR[p]}"></div></div><span class="val num">${money(shown[p].plan.total)}/mo</span></div>`).join("")}</div></div>`;
 
-  h += `<div class="cards">` + ORDER.map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
+  h += `<div class="cards">` + activeClouds().map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
   if (openDrill) h += drill(openDrill);
   $("out").innerHTML = h + consPanel();
   bindOut(cheapest);
@@ -797,8 +808,8 @@ function consPanel(){
   const row = (l, f, cls = "") => `<tr class="${cls}"><th scope="row">${l}</th>${c.cols.map(p => `<td>${f(c.per[p], p)}</td>`).join("")}</tr>`;
   const vs = (x, p) => { if (p === "ocvs" || !base) return "—"; const d = x.total - base.total;
     return `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) / base.total * 100)}%)</span>`; };
-  return `<div class="sec"><div><h2>Consolidated: both clusters</h2><p>Management + workload cluster, lowest-cost configuration on each cloud. ${c.ranked.length ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
-  <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>Both clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
+  return `<div class="sec"><div><h2>Consolidated: both clusters</h2><p>Management + workload cluster, lowest-cost configuration on each cloud. ${c.ranked.length > 1 ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
+  <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>Both clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && c.cols.length > 1 ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${row("Management cluster", x => `${esc(x.m.cfg)}<br><span class="spec">${fmt(x.m.cores)} cores · ${ramText(x.m.ram)} RAM</span>`)}
   ${row("Management / month", x => money(x.m.total))}
   ${row("Workload cluster", x => `${esc(x.w.cfg)}<br><span class="spec">${fmt(x.w.cores)} cores · ${ramText(x.w.ram)} RAM</span>`)}
@@ -807,7 +818,7 @@ function consPanel(){
   ${row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
   ${row("Total / month", x => `<b>${money(x.total)}</b>`, "tot")}
   ${row(`${months}-month total`, x => `<b>${kmoney(x.total * months)}</b>`, "tot")}
-  ${base ? row("vs OCVS", vs) : ""}
+  ${base && c.cols.length > 1 ? row("vs OCVS", vs) : ""}
   </tbody></table></div>`;
 }
 // Consolidated deck: one slide per cluster, then both together, in the style of the current view
@@ -834,11 +845,12 @@ function consModel(){
         {section:"WORKLOAD CLUSTER"}, row("Configuration", x => x.w.cfg), row("Cores / RAM", x => `${fmt(x.w.cores)} / ${ramText(x.w.ram)}`), row("Workload / month", x => money(x.w.total)),
         {section:"CONSOLIDATED · BOTH CLUSTERS"}, row("Total nodes", nodes), row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`),
         row("Total / month", x => money(x.total), {strong:true}), row(`${months}-month total`, x => money(x.total * months), {strong:true}),
-        ...(base ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])]};
+        ...(base && c.cols.length > 1 ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])]};
     per.mgmt.title = CL.mgmt; per.work.title = CL.work;
   } else {
     const w = c.ranked[0];
-    total = {eyebrow: "CONSOLIDATED · BOTH CLUSTERS", title2: `Both clusters together: ${P.providers[w].name} is lowest at ${money(c.per[w].total)} a month`,
+    total = {eyebrow: "CONSOLIDATED · BOTH CLUSTERS", bestLabel: c.cols.length > 1 ? "LOWEST COST" : "RECOMMENDED",
+      title2: c.cols.length > 1 ? `Both clusters together: ${P.providers[w].name} is lowest at ${money(c.per[w].total)} a month` : `Both clusters together on ${P.providers[w].name}: ${money(c.per[w].total)} a month`,
       subhead: per.mgmt.subhead, winner: {color: HEX[w]}, rowH: 1.3, rowFont: 12, notes2: notes,
       cards: c.cols.map(p => { const x = c.per[p], d = base ? x.total - base.total : 0;
         return {color: HEX[p], name: P.providers[p].longName, rank: c.ranked.indexOf(p) + 1,
@@ -846,9 +858,9 @@ function consModel(){
                  ["Workload cluster", `${x.w.cfg}\n${fmt(x.w.cores)} cores · ${ramText(x.w.ram)} RAM · ${money(x.w.total)}/mo`],
                  ["Both clusters", `${nodes(x)} nodes · ${fmt(x.cores)} cores · ${ramText(x.ram)} RAM`]],
           price: money(x.total), term: `${kmoney(x.total * months)} over ${months} months`,
-          delta: p === "ocvs" || !base ? (p === w ? "Lowest cost" : "") : d >= 0 ? `+${Math.round(d / base.total * 100)}% vs OCVS` : `${Math.round(-d / base.total * 100)}% below OCVS`,
+          delta: p === "ocvs" || !base ? (p === w && c.cols.length > 1 ? "Lowest cost" : "") : d >= 0 ? `+${Math.round(d / base.total * 100)}% vs OCVS` : `${Math.round(-d / base.total * 100)}% below OCVS`,
           deltaColor: p !== "ocvs" && base && d >= 0 ? "C2410C" : "15803D"}; })};
-    for (const k of ["mgmt","work"]) { per[k].eyebrow = CL[k].toUpperCase(); per[k].title2 = `${CL[k]}: lowest-cost configuration on each cloud`; }
+    for (const k of ["mgmt","work"]) { per[k].eyebrow = CL[k].toUpperCase(); per[k].title2 = `${CL[k]}: lowest-cost configuration on each cloud`; per[k].reqLabel = `${CL[k].toUpperCase()} REQUIREMENT`; }
   }
   const src = per.mgmt.sources;
   return {view, clusters: [per.mgmt, per.work], total,
@@ -892,9 +904,9 @@ function card(p, rank, r, cheap, ocvs, months){
   const pl = r.plan, st = last.ctx[p].storage, pinned = r !== cheap;
   let delta = "";
   if (p !== "ocvs" && ocvs) { const d = pl.total - ocvs.plan.total; delta = `<div class="delta ${d>0?"up":"down"}">${d>0?"+":"−"}${money(Math.abs(d))}/mo (${d>0?"+":"−"}${Math.abs(Math.round(d/ocvs.plan.total*100))}%) vs OCVS</div>`; }
-  else if (p === "ocvs") delta = `<div class="delta" style="color:var(--muted)">Baseline</div>`;
+  else if (p === "ocvs" && !ocvsOnly()) delta = `<div class="delta" style="color:var(--muted)">Baseline</div>`;
   return `<div class="pc" style="--c:${COLOR[p]}">
-   <div class="top"><div class="nm"><span><span class="dot" style="background:${COLOR[p]}"></span> ${pr.longName}</span><span class="rank${rank===0?" r1":""}">#${rank+1}</span></div>
+   <div class="top"><div class="nm"><span><span class="dot" style="background:${COLOR[p]}"></span> ${pr.longName}</span>${ocvsOnly() ? "" : `<span class="rank${rank===0?" r1":""}">#${rank+1}</span>`}</div>
      <div class="price num">${money(pl.total)}<small>/mo</small></div>${delta}
      <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(regionName(p, last.ctx[p].region))}`}</div></div>
    <div class="need">${needBars(r)}</div>
@@ -941,7 +953,7 @@ function cardsModel(){
     return parts.join(" + ") || "—"; };
   const sizedFor = r => ({CPU:`CPU: ${fmt(req.cpu)} vCPU at ${a.ratio}x overcommit`, RAM:`Memory: ${tb(req.ram)} RAM`,
     Storage:`Storage: ${fmt(req.sto)} TB on vSAN`, Minimum:`Minimum cluster size (${r.need.min} hosts)`}[r.plan.driver]);
-  const delta = p => { if (p === "ocvs" || !ocvs) return {t: p === w ? "Lowest cost" : "", c: "15803D"};
+  const delta = p => { if (p === "ocvs" || !ocvs) return {t: p === w && ranked.length > 1 ? "Lowest cost" : "", c: "15803D"};
     const d = shown[p].plan.total - ocvs.plan.total, pct = Math.round(Math.abs(d) / ocvs.plan.total * 100);
     return {t: d >= 0 ? `+${pct}% vs OCVS` : `${pct}% below OCVS`, c: d >= 0 ? "C2410C" : "15803D"}; };
   const cards = ORDER.filter(p => shown[p]).map(p => { const r = shown[p], pl = r.plan, dl = delta(p);
@@ -955,13 +967,13 @@ function cardsModel(){
   const winnerShort = P.providers[w].name;
   return {
     ...base,
-    headline: second ? `${winnerShort} meets the requirement for ${money(wr.plan.total)} a month, ${Math.round((1 - wr.plan.total / shown[second].plan.total) * 100)}% less than the next option` : `${winnerShort}: ${money(wr.plan.total)} a month`,
+    headline: second ? `${winnerShort} meets the requirement for ${money(wr.plan.total)} a month, ${Math.round((1 - wr.plan.total / shown[second].plan.total) * 100)}% less than the next option` : `${winnerShort} meets the requirement for ${money(wr.plan.total)} a month`,
     subhead: `${termName} pricing · ${hours} hours per month · public list prices, BYOL (VMware Cloud Foundation licence not included)`,
     req: [[fmt(req.cpu), "vCPU"], [tb(req.ram), "memory (RAM)"], [`${fmt(req.sto)} TB`, "storage"]],
     winner: {color: HEX[w], short: winnerShort, name: P.providers[w].longName, config: config(wr, w)},
     bars: ranked.map(p => ({long: P.providers[p].longName, config: config(shown[p], p), color: HEX[p], value: shown[p].plan.total,
       label: money(shown[p].plan.total), delta: delta(p).t, deltaColor: delta(p).c})),
-    tiles, cards,
+    tiles, cards, bestLabel: ranked.length > 1 ? "LOWEST COST" : "RECOMMENDED",
     footer: `Monthly cost = hosts + any additional storage. Indicative list prices as of ${P.asOf}; not a quote.`,
     notes2: [...new Set(notes)].concat(["Indicative list prices; not a quote. Excludes VCF licences, networking, egress, backup, support and taxes."]),
     fileName: base.fileName.replace("OCVS_Sizing_", "OCVS_Sizing_Summary_")
@@ -992,7 +1004,7 @@ function deckModel(){
     row("Total / month", r => money(r.plan.total), {strong:true}),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
   ];
-  if (base) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
+  if (base && cols.length > 1) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
   const callouts = base ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? {positive:true, title:`${pct}% lower than ${P.providers[p].name}`, sub:`Save ${kmoney(d * months)} over ${months} months`}
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
@@ -1002,7 +1014,7 @@ function deckModel(){
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
-      ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${ORDER.some(p => ctx[p].disc) ? " Discounts on hosts and storage: " + ORDER.filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
+      ["Basis", `BYOL · ${T.label} · ${hours} hours per month · host prices as of ${P.asOf}, storage prices as of ${S.asOf}.${activeClouds().some(p => ctx[p].disc) ? " Discounts on hosts and storage: " + activeClouds().filter(p => ctx[p].disc).map(p => `${P.providers[p].name} ${Math.round(ctx[p].disc*100)}%`).join(", ") + "." : ""}`],
       ["Sizing", [LBL.aRatio($("aRatio").value), LBL.aRamOc($("aRamOc").value), POL[$("aPol").value].l, ...["aGrowth","aHa","aSlack","aRamRes","aDedup"].filter(changed).map(k => LBL[k]($(k).value))].join(" · ") + (["aGrowth","aHa","aSlack"].some(changed) ? "." : " · no growth, HA spare or free-space buffer.")],
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
@@ -1022,7 +1034,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
     return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
   let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${pptBtns}</div>
-  <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
+  <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p && cols.length > 1 ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${sec("Configuration")}
   ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
   ${row("Node / shape", r => `<b>${esc(r.s.label)}</b>`)}
@@ -1050,12 +1062,12 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
-  ${base ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}
+  ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}
   </tbody></table></div>`;
   if (base) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
       : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
-  h += `<div class="shapebar"><span>Compare every shape:</span>${ORDER.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div></section>`;
+  h += `<div class="shapebar"><span>Compare every shape:</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div></section>`;
   if (openDrill) h += drill(openDrill);
   return h;
 }
@@ -1071,6 +1083,47 @@ document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preve
 // ---------- init ----------
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
 buildProvSel();
+// ---------- "i" help for the advanced settings ----------
+// Short, plain explanations with one worked example each. Keys are input ids, or a drawer id for a whole section.
+const HELP = {
+  term: `How you pay for hosts. <b>On-demand</b> has no commitment. <b>1-year</b> and <b>3-year</b> commit for that term, paid monthly, at a lower rate. Example: an OCVS BM.Standard3.64 host is $3,050 a month on demand and $1,830 on a 3-year commitment. Additional storage is always pay-as-you-go.`,
+  hours: `Hosts are priced per hour, so monthly price = hourly rate × this number. 744 is a 31-day month; 730 is an average month. Example: $2.46 an hour × 744 = $1,830 a month. Storage billed per GB per month, such as OCI Block Volume, is not affected.`,
+  evsBasis: `Amazon EVS price = an EC2 bare-metal host + the EVS fee. <b>Standard instance</b> is the usual EVS deployment and the lower price. <b>Dedicated Host</b> costs more and is for licences tied to a physical host. This only affects the Amazon price.`,
+  dP: `Each cloud is priced in the region you pick. Prices, and which host shapes and storage options exist, vary by region. OCVS host prices are the same in every region.`,
+  dS: `Storage outside the hosts' own vSAN disks. <b>Base configuration</b> uses each cloud's cheapest option suited to running VMs (on OCVS: OCI Block Volume, Balanced, 10 VPU), and only when that costs less than adding hosts. <b>None</b> always adds hosts until the storage fits on vSAN. Shapes with no local disks, such as the OCVS Standard shapes, always need additional storage.`,
+  dD: `A percentage off that cloud's whole monthly price: hosts and additional storage together. Example: 20% off $10,000 gives $8,000. Leave it at 0 for list price.`,
+  aRatio: `How many virtual CPUs share one physical core. 4x means a 64-core host carries 256 vCPUs. Example: 800 vCPU ÷ 256 = 3.1, so 4 hosts are needed for CPU. 1x means one vCPU per core, with no sharing.`,
+  aRamOc: `How much VM memory is promised per GB of host RAM. 1x means none: every GB of VM memory is backed by real RAM. Example: 1.2x lets a 1,024 GB host carry 1,229 GB of VM memory. Most production sizing keeps this at 1x.`,
+  aGrowth: `Extra room for future growth, added to vCPU, RAM and storage before sizing. Example: 30% turns 800 vCPU, 4,096 GB and 60 TB into 1,040 vCPU, 5,325 GB and 78 TB.`,
+  aRamRes: `Share of each host's RAM kept for the hypervisor (ESXi) and vSAN, so VMs can't use it. Example: 10% of a 1,024 GB host leaves 922 GB for VMs.`,
+  aHa: `Spare hosts so the cluster keeps running if a host fails. N+1 adds one host on top of what CPU and RAM need: 4 hosts become 5. If storage or the minimum cluster size already needs more hosts than that, no further host is added.`,
+  aPol: `How vSAN protects data if a host fails, which sets how much raw disk each usable TB takes. RAID-5 takes 1.33 TB raw per usable TB (4 or more hosts), RAID-1 takes 2 TB, and RAID-6 takes 1.5 TB (6 or more hosts). Smaller clusters fall back to RAID-1. Example: a host with 54.4 TB raw gives 40.8 TB usable on RAID-5. <b>vSAN only:</b> it does not change OCI Block Volume or other additional storage.`,
+  aSlack: `Share of vSAN capacity kept empty for rebuilds and maintenance (VMware suggests 25 to 30%). Example: 25% turns 40.8 TB usable into 30.6 TB. <b>vSAN only:</b> OCI Block Volume and other additional storage are sized at the capacity needed, with no headroom added.`,
+  aDedup: `Expected space saving from vSAN deduplication and compression. 1x means none. Example: 1.5x lets 30.6 TB of disk hold 45.9 TB of data. <b>vSAN only:</b> it does not reduce OCI Block Volume or other additional storage.`
+};
+for (const [k, html] of Object.entries(HELP)) {
+  const btn = `<button type="button" class="info" aria-expanded="false" aria-controls="help_${k}" aria-label="What does this mean?" data-info="${k}">i</button>`;
+  const help = `<div class="help hidden" id="help_${k}">${html}</div>`;
+  if (/^d[PSD]$/.test(k)) {             // whole section: button beside the section title
+    $(k).querySelector(".dhead b").insertAdjacentHTML("beforeend", " " + btn);
+    $(k).querySelector(".dhead").insertAdjacentHTML("afterend", help);
+  } else {                               // single field: button beside its label
+    const f = $(k).closest(".field"), lab = f.querySelector("label"), w = document.createElement("div");
+    w.className = "lbl"; lab.replaceWith(w); w.append(lab); w.insertAdjacentHTML("beforeend", btn);
+    f.insertAdjacentHTML("beforeend", help);
+  }
+}
+document.querySelectorAll(".info").forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation();
+  const open = !$("help_" + b.dataset.info).classList.toggle("hidden"); b.setAttribute("aria-expanded", open); });
+$("evsBasis").closest(".field").dataset.p = "evs";
+
+// ---------- OCVS only: no comparison with the other clouds ----------
+$("only").onchange = () => {
+  document.body.classList.toggle("only-ocvs", ocvsOnly());
+  if (openDrill && openDrill !== "ocvs") openDrill = null;
+  update();
+};
+
 [...PKEYS, ...AKEYS, "mCpu", "mRam", "mSto"].forEach(k => $(k).addEventListener("input", update));
 const L = (t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
 $("sources").innerHTML = `
