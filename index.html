@@ -832,6 +832,11 @@ function render(){
 // ---------- all clusters together ----------
 const cfgText = (r, p, ctx) => { const pl = r.plan, st = ctx[p].storage;
   return `${pl.hosts} × ${r.s.label}` + (pl.kind === "so" ? ` + ${pl.so} × ${pl.soId}` : "") + (pl.ext ? ` + ${pl.ext < 10 ? +pl.ext.toFixed(1) : fmt(pl.ext)} TB ${st.name}` : ""); };
+// Usable storage a configuration provides: vSAN (after policy and headroom) plus any additional storage
+const storageGet = (r, p, ctx) => { const pl = r.plan, st = ctx[p].storage, parts = [];
+  if (r.s.raw || pl.so) parts.push(`${fmt(pl.usable)} TB vSAN`);
+  if (pl.ext) parts.push(`${pl.ext < 10 ? +pl.ext.toFixed(1) : fmt(pl.ext)} TB ${st.name}`);
+  return parts.join(" + ") || "—"; };
 const ramText = gb => gb >= 1024 ? `${+(gb / 1024).toFixed(1)} TB` : `${fmt(gb)} GB`;
 // Per cloud: each cluster's configuration and cost, and the totals
 function consolidate(){
@@ -860,7 +865,7 @@ function consPanel(){
   <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>${n} clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && many ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${c.list.map((cl, i) => row(esc(cl.full), x => `${esc(x.parts[i].cfg)}${basicOn() ? "" : `<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span>`} · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
   ${row("Total nodes", x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`, "tot")}
-  ${basicOn() ? "" : row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
+  ${row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
   ${row("Total / month", x => `<b>${money(x.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", x => `<b>${kmoney(x.total * 12)}</b>`, "tot") : ""}
   ${row(`${months}-month total`, x => `<b>${kmoney(x.total * months)}</b>`, "tot")}
@@ -885,7 +890,7 @@ function consModel(){
   const notes = ["All clusters priced BYOL (customer brings the VCF licence). Indicative list prices; not a quote.", "Excludes VCF licences, networking, egress, backup, support and taxes."];
   const row = (label, f, o = {}) => ({label, cells: c.cols.map(p => f(c.per[p], p)), ...o});
   const clusterRows = c.list.map((cl, i) => row(cl.full, x => `${x.parts[i].cfg} · ${money(x.parts[i].total)}/mo`));
-  const totalRows = [row("Total nodes", nodes), ...(basicOn() ? [] : [row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)]),
+  const totalRows = [row("Total nodes", nodes), row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`),
     row("Total / month", x => money(x.total), {strong:true}), ...(months !== 12 ? [row("12-month total", x => money(x.total * 12), {strong:true})] : []),
     row(`${months}-month total`, x => money(x.total * months), {strong:true}),
     ...(base && many ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])];
@@ -1056,9 +1061,16 @@ function deckModel(){
     return `${d < 0 ? "−" : ""}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * m) * 100)}%)`; };
   const rows = basicOn() ? [
     {section:"RECOMMENDED CONFIGURATION"},
+    row("Region", (r, p) => (P.providers[p].regions.find(x => x.id === ctx[p].region) || {name:ctx[p].region}).name),
     row("Configuration", (r, p) => cfgText(r, p, ctx)),
     row("Nodes", r => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}`),
+    row("Sized by", r => r.plan.driver),
+    {section:"WHAT YOU GET"},
+    row("Total cores / RAM", r => `${fmt(r.plan.hosts * r.s.cores)} cores / ${ramText(r.plan.hosts * r.s.ram)}`),
+    row("Usable storage", (r, p) => storageGet(r, p, ctx)),
     {section:`${T.short} PRICING`},
+    row("Per node / month", r => money(r.rate * hours)),
+    row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
     ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
@@ -1111,12 +1123,19 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
   const lvl = view === 3 ? `<div class="seg lvl" role="group" aria-label="Level of detail"><button data-lvl="basic" aria-pressed="${detail === "basic"}">Basic</button><button data-lvl="detailed" aria-pressed="${detail === "detailed"}">Detailed</button></div>` : "";
   let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${lvl}${pptBtns}</div>
-  ${view === 3 ? `<p class="lvlnote">${detail === "basic" ? "<b>Basic:</b> the recommended configuration and price on each cloud. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail, as in View 2. Download PPT gives the full deck."}</p>` : ""}
+  ${view === 3 ? `<p class="lvlnote">${detail === "basic" ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail, as in View 2. Download PPT gives the full deck."}</p>` : ""}
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p && cols.length > 1 ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${basicOn() ? `${sec("Recommended configuration")}
+  ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
   ${row("Configuration", (r, p) => `<b>${esc(cfgText(r, p, ctx))}</b>`)}
   ${row("Nodes", r => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}`)}
+  ${row("Sized by", r => r.plan.driver)}
+  ${sec("What you get")}
+  ${row("Total cores / RAM", r => `${fmt(r.plan.hosts * r.s.cores)} cores / ${ramText(r.plan.hosts * r.s.ram)}`)}
+  ${row("Usable storage", (r, p) => esc(storageGet(r, p, ctx)))}
   ${sec(`${T.short} pricing`)}
+  ${row("Per node / month", r => money(r.rate * hours))}
+  ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}

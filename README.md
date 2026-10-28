@@ -1,11 +1,11 @@
 # OCVS Sizing Tool
 
-## ▶ Open the tool: **https://lvaibhavt.github.io/ocvs-sizing-tool/**
+## â–¶ Open the tool: **https://lvaibhavt.github.io/ocvs-sizing-tool/**
 
 Three layouts, same inputs and numbers (switch at the top of the page):
-- **View 1 · Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/
-- **View 2 · Table** (navy/gold comparison table, like VMware Cloud Pricing Compare): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2
-- **View 3 · Summary**: View 2 with a **Basic / Detailed** switch. Basic shows only the recommended configuration, node count, monthly, 12-month and term price and the savings with OCVS; Detailed is the full View 2. **Download PPT** follows the switch (single-cluster and consolidated decks): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=3
+- **View 1 Â· Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/
+- **View 2 Â· Table** (navy/gold comparison table, like VMware Cloud Pricing Compare): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2
+- **View 3 Â· Summary**: View 2 with a **Basic / Detailed** switch. Basic shows the region, recommended configuration, node count and what it is sized by, total cores / RAM and usable storage, per-node, storage, monthly, 12-month and term price, and the savings with OCVS; Detailed is the full View 2. **Download PPT** follows the switch (single-cluster and consolidated decks): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=3
 
 This tool sizes a VMware workload by host shape across four clouds:
 
@@ -41,10 +41,10 @@ Out of the box the tool uses the basics: **3-year commitment with monthly paymen
 
 | Cloud | Default additional storage (Frankfurt) |
 |---|---|
-| OCVS | OCI Block Volume · Balanced (10 VPU) |
-| AVS | Azure Elastic SAN · Premium LRS |
+| OCVS | OCI Block Volume Â· Balanced (10 VPU) |
+| AVS | Azure Elastic SAN Â· Premium LRS |
 | GCVE | Cheapest of Google Cloud NetApp Volumes Standard and storage-only vSAN nodes |
-| Amazon EVS | FSx for NetApp ONTAP · Single-AZ SSD |
+| Amazon EVS | FSx for NetApp ONTAP Â· Single-AZ SSD |
 
 Switch on **Advanced configuration** to change the commitment, hours, regions, sizing assumptions, the storage option per cloud, and a **discount %** per cloud (taken off the whole price: hosts and additional storage) (every tier, e.g. OCI 20/30/40/50 VPU). Each storage option shows its protocol, media, size limits, price, IOPS and throughput per TiB, per-volume maximums, notes and documentation links. Switching Advanced off goes back to the defaults; your advanced values come back when you switch it on again.
 
@@ -89,8 +89,8 @@ Under **Advanced configuration**, each setting has an **i** button with a short 
 
 ## Sizing logic
 
-- Compute hosts = max(vCPU ÷ (cores × ratio), RAM ÷ usable host RAM), rounded up, plus HA spares.
-- Storage hosts = storage ÷ (raw TB × (1 − slack) ÷ policy factor × dedup), rounded up. If the cluster is too small for RAID-5 or RAID-6, RAID-1 is used instead.
+- Compute hosts = max(vCPU Ã· (cores Ã— ratio), RAM Ã· usable host RAM), rounded up, plus HA spares.
+- Storage hosts = storage Ã· (raw TB Ã— (1 âˆ’ slack) Ã· policy factor Ã— dedup), rounded up. If the cluster is too small for RAID-5 or RAID-6, RAID-1 is used instead.
 - Hosts = max(compute hosts, storage hosts, provider minimum). The minimum is 3 hosts on OCVS, AVS and GCVE, and 4 on EVS.
 - **Additional storage is an explicit choice per cloud** (Pricing toggle). The default is *None*: all storage on vSAN, adding hosts until it fits.
 - If you pick an option (OCI Block Volume, Azure Elastic SAN or NetApp Files, Google NetApp Volumes or Filestore, Amazon FSx for ONTAP, or **GCVE storage-only vSAN nodes**), hosts are sized for compute and the rest of the storage goes there, at the capacity needed (free-space headroom is a vSAN setting and is not added to it).
