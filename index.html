@@ -281,6 +281,9 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
 .clname{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .clname label{font-size:12px;font-weight:600;color:var(--muted)}
 .clname input{flex:1;min-width:220px;max-width:420px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text);font:inherit}
+.t2head .lvl{margin-left:auto}
+.lvlnote{font-size:12.5px;color:var(--muted);margin:-6px 0 12px}
+body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -289,7 +292,7 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
-  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a></nav>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · Summary</a></nav>
 </div></header>
 
 <main class="main">
@@ -712,7 +715,7 @@ const clusterIndex = ids => ids.map(id => id === "mgmt" ? "Management cluster" :
 // Put the cluster's name and number on a single-cluster deck model
 function labelDeck(m, id){
   const full = clusterFull(id);
-  if (view === 2) m.title = full;
+  if (view >= 2) m.title = full;
   else { m.eyebrow = full.toUpperCase(); m.sumEyebrow = `EXECUTIVE SUMMARY · ${full.toUpperCase()}`;
     m.title2 = `${full}: lowest-cost configuration on each cloud`; m.reqLabel = `${clusterName(id).toUpperCase()} REQUIREMENT`; }
   return m;
@@ -803,12 +806,12 @@ function render(){
   const disc = activeClouds().filter(p => ctx[p].disc).map(p => `<span class="pill chg">${P.providers[p].name} discount −${Math.round(ctx[p].disc*100)}%</span>`).join("");
   const clName = multiOn() ? esc(clusterFull(cur)) + ": " : "";
   const pptBtns = `<div class="btns"><button class="pptb" data-ppt>${multiOn() ? "Download PPT (this cluster)" : "Download PPT"}</button>${multiOn() ? `<button class="pptb alt" data-pptall>Download consolidated PPT</button>` : ""}</div>`;
-  let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+eff("aGrowth") ? `After ${eff("aGrowth")}% growth. ` : ""}Highlighted assumptions differ from the defaults.</p></div></div>
+  let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+eff("aGrowth") ? `After ${eff("aGrowth")}% growth. ` : ""}${basicOn() ? "" : "Highlighted assumptions differ from the defaults."}</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span></div>
-   <div class="req" style="margin-top:8px">${used}${disc}</div>`;
+   ${basicOn() ? (disc ? `<div class="req" style="margin-top:8px">${disc}</div>` : "") : `<div class="req" style="margin-top:8px">${used}${disc}</div>`}`;
 
   if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
-  if (view === 2) { $("out").innerHTML = h + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
+  if (view >= 2) { $("out").innerHTML = h + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
   h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div>${pptBtns}</div>
@@ -855,9 +858,9 @@ function consPanel(){
     return `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) / base.total * 100)}%)</span>`; };
   return `<div class="sec"><div><h2>Consolidated: ${allWord(n)}</h2><p>Management + ${n - 1} workload cluster${n > 2 ? "s" : ""}, lowest-cost configuration on each cloud. ${many ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
   <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>${n} clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && many ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
-  ${c.list.map((cl, i) => row(esc(cl.full), x => `${esc(x.parts[i].cfg)}<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span> · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
+  ${c.list.map((cl, i) => row(esc(cl.full), x => `${esc(x.parts[i].cfg)}${basicOn() ? "" : `<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span>`} · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
   ${row("Total nodes", x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`, "tot")}
-  ${row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
+  ${basicOn() ? "" : row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
   ${row("Total / month", x => `<b>${money(x.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", x => `<b>${kmoney(x.total * 12)}</b>`, "tot") : ""}
   ${row(`${months}-month total`, x => `<b>${kmoney(x.total * months)}</b>`, "tot")}
@@ -870,7 +873,7 @@ function consModel(){
   if (!c) throw new Error("Switch on workload clusters first.");
   if (c.missing) throw new Error(`Enter numbers (or upload an RVTools report) for ${c.missing.join(", ")} first.`);
   const n = c.list.length, keep = last, models = [];
-  try { for (const cl of c.list) { last = cl.res; models.push(view === 2 ? deckModel() : cardsModel()); } } finally { last = keep; }
+  try { for (const cl of c.list) { last = cl.res; models.push(view >= 2 ? deckModel() : cardsModel()); } } finally { last = keep; }
   const T = Calc.TERMS[last.term], months = T.months, base = c.per.ocvs, hours = last.hours, many = c.cols.length > 1;
   const word = allWord(n), Word = word[0].toUpperCase() + word.slice(1);
   const nodes = x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`;
@@ -882,7 +885,7 @@ function consModel(){
   const notes = ["All clusters priced BYOL (customer brings the VCF licence). Indicative list prices; not a quote.", "Excludes VCF licences, networking, egress, backup, support and taxes."];
   const row = (label, f, o = {}) => ({label, cells: c.cols.map(p => f(c.per[p], p)), ...o});
   const clusterRows = c.list.map((cl, i) => row(cl.full, x => `${x.parts[i].cfg} · ${money(x.parts[i].total)}/mo`));
-  const totalRows = [row("Total nodes", nodes), row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`),
+  const totalRows = [row("Total nodes", nodes), ...(basicOn() ? [] : [row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)]),
     row("Total / month", x => money(x.total), {strong:true}), ...(months !== 12 ? [row("12-month total", x => money(x.total * 12), {strong:true})] : []),
     row(`${months}-month total`, x => money(x.total * months), {strong:true}),
     ...(base && many ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])];
@@ -896,8 +899,8 @@ function consModel(){
   const slides = [];
   c.list.forEach((cl, i) => { const m = models[i];
     labelDeck(m, cl.id);
-    slides.push({kind: view === 2 ? "main" : many ? "cards" : "single", model:m}); });
-  if (view === 2) {
+    slides.push({kind: view >= 2 ? "main" : many ? "cards" : "single", model:m}); });
+  if (view >= 2) {
     // with savings rows and callouts to fit as well, the cluster list moves to its own slide sooner
     if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
     else slides.push(...breakdown(8), {kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
@@ -919,11 +922,11 @@ function consModel(){
   return {slides,
     sources: [src[0], src[1], ["Clusters", clusterIndex(c.list.map(cl => cl.id)) + "."], ...c.cols.map(p => [P.providers[p].longName,
       (n <= 4 ? c.per[p].parts.map(pt => `${pt.name}: ${pt.cfg}`).join(". ") + "." : `${n} clusters, ${nodes(c.per[p])} nodes in total.`) + ` Source: ${P.providers[p].source}.`]), src[src.length - 1]],
-    fileName: `OCVS_Sizing_Consolidated_${last.term}.pptx`};
+    fileName: `OCVS_Sizing_Consolidated_${basicOn() ? "Basic_" : ""}${last.term}.pptx`};
 }
 // The deck for the open cluster. With several clusters it carries that cluster's name and number.
 function clusterDeckModel(){
-  const m = view === 2 ? deckModel() : cardsModel();
+  const m = view >= 2 ? deckModel() : cardsModel();
   if (multiOn()) {
     labelDeck(m, cur);
     m.sources.splice(2, 0, ["Cluster", `${clusterFull(cur)}. One of ${clusterIds().length} clusters in the SDDC: ${clusterIndex(clusterIds())}.`]);
@@ -932,10 +935,11 @@ function clusterDeckModel(){
   return m;
 }
 function bindOut(cheapest){
+  document.querySelectorAll("[data-lvl]").forEach(b => b.onclick = () => { if (detail !== b.dataset.lvl) { detail = b.dataset.lvl; openDrill = null; render(); } });
   document.querySelectorAll("[data-ppt]").forEach(b => b.onclick = async () => {
     b.disabled = true; const t = b.textContent; b.textContent = "Building…";
     try { const m = clusterDeckModel();
-      if (view === 2) await Deck.download(m); else await Deck.downloadCards(m); } catch (e) { alert(e.message); }
+      if (view >= 2) await Deck.download(m); else await Deck.downloadCards(m); } catch (e) { alert(e.message); }
     b.disabled = false; b.textContent = t; });
   document.querySelectorAll("[data-pptall]").forEach(b => b.onclick = async () => {
     b.disabled = true; const t = b.textContent; b.textContent = "Building…";
@@ -1050,7 +1054,15 @@ function deckModel(){
   const sto = (r, p) => r.plan.kind === "so" ? `${r.plan.so} × ${r.plan.soId}` : r.plan.ext ? `${r.plan.ext.toFixed(1)} TB ${ctx[p].storage.name}${minNote(ctx[p].storage, r.plan.ext) ? ` (billed at ${ctx[p].storage.minGiB / 1024} TB minimum)` : ""}` : "None (vSAN only)";
   const save = (r, p, m) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * m;
     return `${d < 0 ? "−" : ""}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * m) * 100)}%)`; };
-  const rows = [
+  const rows = basicOn() ? [
+    {section:"RECOMMENDED CONFIGURATION"},
+    row("Configuration", (r, p) => cfgText(r, p, ctx)),
+    row("Nodes", r => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}`),
+    {section:`${T.short} PRICING`},
+    row("Total / month", r => money(r.plan.total), {strong:true}),
+    ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
+    row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
+  ] : [
     {section:"CONFIGURATION"},
     row("Region", (r, p) => (P.providers[p].regions.find(x => x.id === ctx[p].region) || {name:ctx[p].region}).name),
     row("Node / shape", r => r.s.label),
@@ -1083,7 +1095,7 @@ function deckModel(){
       ...cols.map(p => [P.providers[p].longName, `${shown[p].plan.hosts} × ${shown[p].s.label}; storage: ${sto(shown[p], p)}. Source: ${P.providers[p].source}.`]),
       ["Scope", "Hosts plus any additional storage. Excludes VCF licences, networking, egress, backup, support and taxes. Estimates, not quotes."]
     ],
-    fileName: `OCVS_Sizing_${term}_${cols.map(p => shown[p].s.id.replace(/[^\w.-]/g, "")).join("_vs_")}.pptx`
+    fileName: `OCVS_Sizing_${basicOn() ? "Basic_" : ""}${term}_${cols.map(p => shown[p].s.id.replace(/[^\w.-]/g, "")).join("_vs_")}.pptx`
   };
 }
 
@@ -1097,9 +1109,18 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   const save = (r, p, mult) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * mult;
     return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
-  let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${pptBtns}</div>
+  const lvl = view === 3 ? `<div class="seg lvl" role="group" aria-label="Level of detail"><button data-lvl="basic" aria-pressed="${detail === "basic"}">Basic</button><button data-lvl="detailed" aria-pressed="${detail === "detailed"}">Detailed</button></div>` : "";
+  let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${lvl}${pptBtns}</div>
+  ${view === 3 ? `<p class="lvlnote">${detail === "basic" ? "<b>Basic:</b> the recommended configuration and price on each cloud. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail, as in View 2. Download PPT gives the full deck."}</p>` : ""}
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p && cols.length > 1 ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
-  ${sec("Configuration")}
+  ${basicOn() ? `${sec("Recommended configuration")}
+  ${row("Configuration", (r, p) => `<b>${esc(cfgText(r, p, ctx))}</b>`)}
+  ${row("Nodes", r => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}`)}
+  ${sec(`${T.short} pricing`)}
+  ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
+  ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
+  ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
+  ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}` : `${sec("Configuration")}
   ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
   ${row("Node / shape", r => `<b>${esc(r.s.label)}</b>`)}
   ${row("Nodes in cluster", (r, p) => `${r.plan.hosts}${r.plan.kind === "so" ? ` + ${r.plan.so} storage-only` : ""}${r.plan.driver === "Minimum" ? ` (${P.providers[p].name} minimum)` : ""}`)}
@@ -1127,22 +1148,26 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
-  ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}
+  ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}`}
   </tbody></table></div>`;
   if (base) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
       : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
-  h += `<div class="shapebar"><span>Compare every shape:</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div></section>`;
-  if (openDrill) h += drill(openDrill);
+  if (!basicOn()) h += `<div class="shapebar"><span>Compare every shape:</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div>`;
+  h += `</section>`;
+  if (openDrill && !basicOn()) h += drill(openDrill);
   return h;
 }
 function setView(v){
-  view = v; document.body.classList.toggle("v2", v === 2);
+  view = v; document.body.classList.toggle("v2", v >= 2);   // View 3 uses the View 2 style
   document.querySelectorAll("[data-view]").forEach(a => a.setAttribute("aria-current", +a.dataset.view === v ? "page" : "false"));
-  try { history.replaceState(null, "", v === 2 ? "?view=2" : location.pathname); } catch (e) {}
+  try { history.replaceState(null, "", v > 1 ? "?view=" + v : location.pathname); } catch (e) {}
   if (last) render();
 }
-let view = new URLSearchParams(location.search).get("view") === "2" ? 2 : 1;
+let view = ({"2": 2, "3": 3})[new URLSearchParams(location.search).get("view")] || 1;
+// View 3: a copy of View 2 with a Basic / Detailed switch. Basic shows (and downloads) only the configuration and price.
+let detail = "basic";
+const basicOn = () => view === 3 && detail === "basic";
 document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preventDefault(); setView(+a.dataset.view); });
 
 // ---------- init ----------
