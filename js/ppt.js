@@ -114,12 +114,48 @@
 
   const sup = n => String(n).replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
 
+  // View 3: "Cost at a glance" - one line per cloud, cheapest first: name and configuration, cost bar,
+  // monthly price, and a tag with what OCVS saves against that cloud
+  function slideGlance(pptx, g) {
+    const s = pptx.addSlide();
+    s.background = { color: C.white };
+    banner(pptx, s);
+    s.addText(g.title, { x: M, y: 0.45 + D, w: 11.4, h: 0.8, fontFace: HEAD, fontSize: g.title.length > 30 ? 30 : 38, bold: true, color: C.navy, margin: 0, isTextBox: true, valign: "middle" });
+    s.addText(g.subtitle, { x: M, y: 1.22 + D, w: W - 2 * M, h: 0.35, fontFace: BODY, fontSize: 15, color: C.muted, margin: 0, isTextBox: true });
+    s.addShape(pptx.ShapeType.roundRect, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fill: { color: C.navy }, rectRadius: 0.3, line: { color: C.navy } });
+    s.addText(g.badge, { x: W - M - 3.8, y: 0.55 + D, w: 3.8, h: 0.6, fontFace: HEAD, fontSize: 17, bold: true, color: C.gold, align: "center", valign: "middle", margin: 0, isTextBox: true });
+    const top = 2.45, n = g.items.length, rowH = Math.min(1.4, (H - top - 0.8) / n);
+    const nameW = 3.7, priceW = 1.9, chipW = 4.4, gap = 0.3, barX = M + nameW + gap, barW = W - 2 * M - nameW - priceW - chipW - 3 * gap;
+    const max = Math.max(...g.items.map(i => i.value));
+    g.items.forEach((it, i) => {
+      const y = top + i * rowH, cy = y + rowH / 2, me = it.chip && it.chip.kind === "base";
+      s.addShape(pptx.ShapeType.roundRect, { x: M, y: y + 0.05, w: W - 2 * M, h: rowH - 0.1, rectRadius: 0.08, fill: { color: me ? C.baseBg : "FFFFFF" }, line: { color: me ? C.navy : C.line, width: me ? 1.5 : 0.75 } });
+      s.addShape(pptx.ShapeType.ellipse, { x: M + 0.22, y: cy - 0.09, w: 0.18, h: 0.18, fill: { color: it.color }, line: { color: it.color } });
+      s.addText([{ text: it.name, options: { fontFace: HEAD, fontSize: 18, bold: true, color: C.navy, breakLine: true } }, { text: it.config, options: { fontFace: BODY, fontSize: 10.5, color: C.muted } }],
+        { x: M + 0.55, y: y + 0.1, w: nameW - 0.6, h: rowH - 0.2, valign: "middle", margin: 0, isTextBox: true, fit: "shrink" });
+      s.addShape(pptx.ShapeType.roundRect, { x: barX, y: cy - 0.14, w: barW, h: 0.28, rectRadius: 0.14, fill: { color: C.secBg }, line: { color: C.secBg } });
+      s.addShape(pptx.ShapeType.roundRect, { x: barX, y: cy - 0.14, w: Math.max(0.15, barW * it.value / max), h: 0.28, rectRadius: 0.14, fill: { color: it.color }, line: { color: it.color } });
+      s.addText([{ text: it.label, options: { fontFace: HEAD, fontSize: 18, bold: true, color: C.navy } }, { text: " /mo", options: { fontFace: BODY, fontSize: 11, color: C.muted } }],
+        { x: barX + barW + gap * 0.5, y: cy - 0.3, w: priceW + gap * 0.5, h: 0.6, align: "right", valign: "middle", margin: 0, isTextBox: true });
+      if (it.chip) {
+        const k = it.chip.kind, cx = W - M - chipW - 0.12, chH = Math.min(0.95, rowH - 0.34);
+        const fill = k === "base" ? C.navy : k === "good" ? C.calloutBg : C.calloutBgNeg, line = k === "base" ? C.navy : k === "good" ? C.calloutLine : C.calloutLineNeg;
+        s.addShape(pptx.ShapeType.roundRect, { x: cx, y: cy - chH / 2, w: chipW, h: chH, rectRadius: 0.08, fill: { color: fill }, line: { color: line, width: 1 } });
+        s.addText([{ text: it.chip.title, options: { fontFace: HEAD, fontSize: 16, bold: true, color: k === "base" ? C.gold : k === "good" ? C.green : C.red, breakLine: true } },
+          { text: it.chip.sub, options: { fontFace: BODY, fontSize: 11.5, color: k === "base" ? "FFFFFF" : C.body } }],
+          { x: cx + 0.2, y: cy - chH / 2, w: chipW - 0.3, h: chH, valign: "middle", margin: 0, isTextBox: true, fit: "shrink" });
+      }
+    });
+    s.addText(g.notes.join("   "), { x: M, y: H - 0.55, w: W - 2 * M, h: 0.4, fontFace: BODY, fontSize: 9, color: "666666", valign: "top", margin: 0, isTextBox: true });
+  }
+
   function build(rep) {
     if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load (check your internet connection).");
     const pptx = new window.PptxGenJS();
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing";
+    if (rep.glance) slideGlance(pptx, rep.glance);
     slideMain(pptx, rep);
     slideSources(pptx, rep);
     return pptx;
@@ -271,7 +307,7 @@
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing: consolidated";
-    const kinds = { main: slideMain, cards: slideSolutions, single: slideSingle, summary: slideSummary };
+    const kinds = { main: slideMain, cards: slideSolutions, single: slideSingle, summary: slideSummary, glance: slideGlance };
     m.slides.forEach(x => kinds[x.kind](pptx, x.model));
     slideSources(pptx, m);
     return pptx;

@@ -2,9 +2,10 @@
 
 ## â–¶ Open the tool: **https://lvaibhavt.github.io/ocvs-sizing-tool/**
 
-Two layouts, same inputs and numbers (switch at the top of the page). Both have a **Basic / Detailed** switch, and **Download PPT** follows it:
+Three layouts, same inputs and numbers (switch at the top of the page). Both have a **Basic / Detailed** switch, and **Download PPT** follows it:
 - **View 1 · Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/ . Basic hides the nodes-per-resource detail and the shape comparison, and the PPT is a one-slide summary; Detailed shows everything, and the PPT adds the recommended-configuration slide.
 - **View 2 · Table** (navy/gold comparison table): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2 . Basic shows the region, configuration, nodes, what it is sized by, total cores / RAM, usable storage, the prices and the savings with OCVS; Detailed is the full table.
+- **View 3 · At a glance**: https://lvaibhavt.github.io/ocvs-sizing-tool/?view=3 . View 2 with a **Cost at a glance** panel on top: one line per cloud, cheapest first, with its configuration, a monthly cost bar, the price and a tag showing what OCVS saves against it (for example "OCVS 49% lower · saves $347K over 36 months"). The Basic / Detailed table follows. Download PPT starts with a matching "Cost at a glance" slide.
 
 This tool sizes a VMware workload by host shape across four clouds:
 

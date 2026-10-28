@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610281617"></script>
+<script src="js/ppt.js?v=202610281626"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610281617"></script>
-<script src="data/prices.js?v=202610281617"></script>
-<script src="js/data.js?v=202610281617"></script>
+<script src="data/catalog.js?v=202610281626"></script>
+<script src="data/prices.js?v=202610281626"></script>
+<script src="js/data.js?v=202610281626"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -285,6 +285,31 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
 .lvlnote{font-size:12.5px;color:var(--muted);margin:-6px 0 12px}
 body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold)}
 .hdr-r{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.glance{margin-top:24px}
+.gl{display:grid;gap:10px}
+.gr{display:grid;grid-template-columns:minmax(170px,1.1fr) 2.2fr 120px minmax(210px,1.25fr);gap:18px;align-items:center;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.gr.me{background:var(--base);border-color:var(--navy);box-shadow:inset 4px 0 0 var(--navy)}
+.gn{display:flex;gap:10px;align-items:center;min-width:0}
+.gn .dot{width:12px;height:12px;flex:none}
+.gn b{display:block;font-family:Georgia,"Times New Roman",serif;font-size:16.5px;color:var(--navy)}
+.gn span{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.gt{height:16px;border-radius:99px;background:var(--soft);overflow:hidden}
+.gf{height:100%;border-radius:99px;transition:width .3s}
+.gv{text-align:right;white-space:nowrap}
+.gv b{font-family:Georgia,"Times New Roman",serif;font-size:19px;color:var(--navy)}
+.gv span{color:var(--muted);font-size:12px;margin-left:2px}
+.gs{border-radius:8px;padding:8px 12px;border:1px solid transparent;min-height:48px}
+.gs b{display:block;font-family:Georgia,"Times New Roman",serif;font-size:15.5px}
+.gs span{font-size:12.5px;color:#333}
+.gs.good{background:#edf6ee;border-color:#c8e3cb}
+.gs.good b{color:var(--good)}
+.gs.bad{background:#fbeceb;border-color:#f0c6c3}
+.gs.bad b{color:var(--bad)}
+.gs.base{background:var(--navy);border-color:var(--navy)}
+.gs.base b{color:var(--gold)}
+.gs.base span{color:#fff}
+@media (max-width:820px){.gr{grid-template-columns:1fr auto}.gt{grid-column:1/-1;order:3}.gs{grid-column:1/-1;order:4}}
+@media (prefers-color-scheme:dark){body.v2 .gs.good{background:#16301b;border-color:#24532c}body.v2 .gs.bad{background:#3a1715;border-color:#6b2a25}body.v2 .gs span{color:#ddd}body.v2 .gn b,body.v2 .gv b{color:#e8eaf2}}
 </style>
 </head>
 <body>
@@ -293,7 +318,7 @@ body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
-  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a></nav>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · At a glance</a></nav>
 </div></header>
 
 <main class="main">
@@ -812,7 +837,7 @@ function render(){
    ${basicOn() ? (disc ? `<div class="req" style="margin-top:8px">${disc}</div>` : "") : `<div class="req" style="margin-top:8px">${used}${disc}</div>`}`;
 
   if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
-  if (view >= 2) { $("out").innerHTML = h + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
+  if (view >= 2) { $("out").innerHTML = h + (view === 3 ? glanceHtml(glanceItems(ranked.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months), `Monthly cost on each cloud, cheapest first · ${Calc.TERMS[term].label} · BYOL`) : "") + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
   h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div><div class="hdr-r">${lvlSwitch()}${pptBtns}</div></div>
@@ -829,6 +854,35 @@ function render(){
   if (openDrill && !basicOn()) h += drill(openDrill);
   $("out").innerHTML = h + consPanel();
   bindOut(cheapest);
+}
+
+// ---------- View 3: cost at a glance ----------
+// One line per cloud, cheapest first: configuration, a monthly cost bar, the price, and what OCVS saves against it.
+// list = [{p, total, config}]
+function glanceItems(list, months){
+  const ocvs = list.find(x => x.p === "ocvs"), max = Math.max(...list.map(x => x.total));
+  return [...list].sort((a, b) => a.total - b.total).map((x, i) => {
+    let chip = null;
+    if (x.p === "ocvs") chip = {kind: "base", title: i === 0 ? "Lowest cost" : "OCVS", sub: `${kmoney(x.total * months)} over ${months} months`};
+    else if (ocvs) { const d = x.total - ocvs.total, pct = Math.round(Math.abs(d) / x.total * 100);
+      chip = d >= 0 ? {kind: "good", title: `OCVS ${pct}% lower`, sub: `saves ${kmoney(d * months)} over ${months} months`}
+        : {kind: "bad", title: `OCVS ${pct}% higher`, sub: `${kmoney(-d * months)} more over ${months} months`}; }
+    return {...x, name: P.providers[x.p].name, color: HEX[x.p], css: COLOR[x.p], width: x.total / max * 100, chip};
+  });
+}
+function glanceHtml(items, sub, title = "Cost at a glance"){
+  if (items.length < 2) return "";   // nothing to compare (OCVS only)
+  return `<section class="t2 glance"><div class="t2head"><div><h2>${title}</h2><span class="muted">${sub}</span></div></div><div class="gl">${items.map(it => `<div class="gr${it.p === "ocvs" ? " me" : ""}">
+    <div class="gn"><span class="dot" style="background:${it.css}"></span><div><b>${it.name}</b><span>${esc(it.config)}</span></div></div>
+    <div class="gt"><div class="gf" style="width:${it.width}%;background:${it.css}"></div></div>
+    <div class="gv num"><b>${money(it.total)}</b><span>/mo</span></div>
+    <div class="gs ${it.chip ? it.chip.kind : ""}">${it.chip ? `<b>${it.chip.title}</b><span>${it.chip.sub}</span>` : ""}</div></div>`).join("")}</div></section>`;
+}
+// The same, as a slide model
+function glanceSlide(list, months, title, subtitle, badge){
+  if (list.length < 2) return null;
+  return {title, subtitle, badge, notes: ["Monthly cost = hosts + any additional storage, BYOL (VCF licence not included).", "Indicative list prices; not a quote."],
+    items: glanceItems(list, months).map(it => ({name: it.name, config: it.config, color: it.color, value: it.total, label: money(it.total), chip: it.chip}))};
 }
 
 // ---------- all clusters together ----------
@@ -863,7 +917,9 @@ function consPanel(){
   const row = (l, f, cls = "") => `<tr class="${cls}"><th scope="row">${l}</th>${c.cols.map(p => `<td>${f(c.per[p], p)}</td>`).join("")}</tr>`;
   const vs = (x, p) => { if (p === "ocvs" || !base) return "—"; const d = x.total - base.total;
     return `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) / base.total * 100)}%)</span>`; };
-  return `<div class="sec"><div><h2>Consolidated: ${allWord(n)}</h2><p>Management + ${n - 1} workload cluster${n > 2 ? "s" : ""}, lowest-cost configuration on each cloud. ${many ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
+  const g = view === 3 ? glanceHtml(glanceItems(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${c.per[p].hosts}${c.per[p].so ? ` + ${c.per[p].so}` : ""} nodes`})), months),
+    `${allWord(n)[0].toUpperCase() + allWord(n).slice(1)} together: monthly cost on each cloud, cheapest first`, `Cost at a glance: ${allWord(n)}`) : "";
+  return g + `<div class="sec"><div><h2>Consolidated: ${allWord(n)}</h2><p>Management + ${n - 1} workload cluster${n > 2 ? "s" : ""}, lowest-cost configuration on each cloud. ${many ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
   <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>${n} clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && many ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${c.list.map((cl, i) => row(esc(cl.full), x => `${esc(x.parts[i].cfg)}${basicOn() ? "" : `<br><span class="spec">${fmt(x.parts[i].cores)} cores · ${ramText(x.parts[i].ram)} RAM</span>`} · <b>${money(x.parts[i].total)}/mo</b>`)).join("")}
   ${row("Total nodes", x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`, "tot")}
@@ -909,8 +965,12 @@ function consModel(){
     slides.push({kind: view >= 2 ? "main" : !many ? "single" : basicOn() ? "summary" : "cards", model:m}); });
   if (view >= 2) {
     // with savings rows and callouts to fit as well, the cluster list moves to its own slide sooner
-    if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
-    else slides.push(...breakdown(8), {kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
+    const cg = view === 3 ? glanceSlide(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${nodes(c.per[p])} nodes`})), months, `Cost at a glance: ${word}`,
+      `${Word} together: monthly cost on each cloud, cheapest first · ${T.label} · BYOL`, T.short) : null;
+    if (cg) slides.push({kind:"glance", model:cg});
+    const co = view === 3 ? [] : callouts;   // View 3 shows the savings on the glance slide
+    if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts: co, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
+    else slides.push(...breakdown(8), {kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts: co, rows:[{section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
   } else {
     const w = c.ranked[0], few = n <= 4;
     if (!few) slides.push(...breakdown(8));
@@ -1096,11 +1156,13 @@ function deckModel(){
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
   ];
   if (base && cols.length > 1) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
-  const callouts = base ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+  const callouts = base && view !== 3 ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? {positive:true, title:`${pct}% lower than ${P.providers[p].name}`, sub:`Save ${kmoney(d * months)} over ${months} months`}
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
+    glance: view === 3 ? glanceSlide(cols.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months, "Cost at a glance",
+      `Monthly cost on each cloud, cheapest first · ${T.label} · ${hours} h/month · BYOL`, T.short) : null,
     subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+eff("aGrowth") ? ` (after ${eff("aGrowth")}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
@@ -1172,7 +1234,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
   ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}`}
   </tbody></table></div>`;
-  if (base) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+  if (base && view !== 3) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
       : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
   if (!basicOn()) h += `<div class="shapebar"><span>Compare every shape:</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div>`;
@@ -1186,7 +1248,7 @@ function setView(v){
   try { history.replaceState(null, "", v > 1 ? "?view=" + v : location.pathname); } catch (e) {}
   if (last) render();
 }
-let view = ({"2": 2, "3": 2})[new URLSearchParams(location.search).get("view")] || 1;
+let view = ({"2": 2, "3": 3})[new URLSearchParams(location.search).get("view")] || 1;
 // Both views have a Basic / Detailed switch. Basic shows (and downloads) a shorter summary; Detailed shows everything.
 let detail = "basic";
 const basicOn = () => detail === "basic";
