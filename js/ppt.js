@@ -254,7 +254,7 @@
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing";
     if (m.cards.length === 1) slideSingle(pptx, m);
-    else { slideSummary(pptx, m); slideSolutions(pptx, m); }
+    else { slideSummary(pptx, m); if (!m.basic) slideSolutions(pptx, m); }   // Basic: the one-slide summary
     slideSources(pptx, m);
     return pptx;
   }
@@ -271,7 +271,7 @@
     pptx.defineLayout({ name: "DECK", width: W, height: H });
     pptx.layout = "DECK";
     pptx.title = "OCVS Sizing & Pricing: consolidated";
-    const kinds = { main: slideMain, cards: slideSolutions, single: slideSingle };
+    const kinds = { main: slideMain, cards: slideSolutions, single: slideSingle, summary: slideSummary };
     m.slides.forEach(x => kinds[x.kind](pptx, x.model));
     slideSources(pptx, m);
     return pptx;

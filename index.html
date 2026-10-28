@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610131408"></script>
+<script src="js/ppt.js?v=202610281617"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610131408"></script>
-<script src="data/prices.js?v=202610131408"></script>
-<script src="js/data.js?v=202610131408"></script>
+<script src="data/catalog.js?v=202610281617"></script>
+<script src="data/prices.js?v=202610281617"></script>
+<script src="js/data.js?v=202610281617"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -284,6 +284,7 @@ table.cons tr.tot td,table.cons tr.tot th{background:var(--soft);font-size:14px}
 .t2head .lvl{margin-left:auto}
 .lvlnote{font-size:12.5px;color:var(--muted);margin:-6px 0 12px}
 body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold)}
+.hdr-r{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -292,7 +293,7 @@ body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
-  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · Summary</a></nav>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a></nav>
 </div></header>
 
 <main class="main">
@@ -814,7 +815,8 @@ function render(){
   if (view >= 2) { $("out").innerHTML = h + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
-  h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div>${pptBtns}</div>
+  h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div><div class="hdr-r">${lvlSwitch()}${pptBtns}</div></div>
+   ${lvlNote()}
    <div class="winner" style="--wc:${COLOR[w]}"><div>
      <div class="t">${ranked.length > 1 ? "Lowest cost" : "Sized and priced"}</div>
      <div class="h">${P.providers[w].longName}</div>
@@ -824,7 +826,7 @@ function render(){
      <div class="tr"><div class="fl" style="width:${shown[p].plan.total/max*100}%;background:${COLOR[p]}"></div></div><span class="val num">${money(shown[p].plan.total)}/mo</span></div>`).join("")}</div></div>`;
 
   h += `<div class="cards">` + activeClouds().map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
-  if (openDrill) h += drill(openDrill);
+  if (openDrill && !basicOn()) h += drill(openDrill);
   $("out").innerHTML = h + consPanel();
   bindOut(cheapest);
 }
@@ -904,7 +906,7 @@ function consModel(){
   const slides = [];
   c.list.forEach((cl, i) => { const m = models[i];
     labelDeck(m, cl.id);
-    slides.push({kind: view >= 2 ? "main" : many ? "cards" : "single", model:m}); });
+    slides.push({kind: view >= 2 ? "main" : !many ? "single" : basicOn() ? "summary" : "cards", model:m}); });
   if (view >= 2) {
     // with savings rows and callouts to fit as well, the cluster list moves to its own slide sooner
     if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
@@ -981,12 +983,12 @@ function card(p, rank, r, cheap, ocvs, months){
    <div class="top"><div class="nm"><span><span class="dot" style="background:${COLOR[p]}"></span> ${pr.longName}</span>${ocvsOnly() ? "" : `<span class="rank${rank===0?" r1":""}">#${rank+1}</span>`}</div>
      <div class="price num">${money(pl.total)}<small>/mo</small></div>${delta}
      <div class="shape"><b>${pl.hosts} × ${esc(r.s.label)}</b>${pinned?`<span class="pin">Your pick</span> · <button class="link" data-unpin="${p}">back to cheapest</button>`:`${pl.driver}-driven · ${esc(regionName(p, last.ctx[p].region))}`}</div></div>
-   <div class="need">${needBars(r)}</div>
+   ${basicOn() ? "" : `<div class="need">${needBars(r)}</div>`}
    ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
    ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span>${minNote(st, pl.ext) ? `<div class="minnote">⚠ ${minNote(st, pl.ext)} <a href="#src-avs-min">Why?</a></div>` : ""}</div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
    <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
-   <button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button></div>`;
+   ${basicOn() ? "" : `<button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button>`}</div>`;
 }
 
 function drill(p){
@@ -1048,6 +1050,7 @@ function cardsModel(){
     tiles, cards, bestLabel: ranked.length > 1 ? "LOWEST COST" : "RECOMMENDED",
     footer: `Monthly cost = hosts + any additional storage. Indicative list prices as of ${P.asOf}; not a quote.`,
     notes2: [...new Set(notes)].concat(["Indicative list prices; not a quote. Excludes VCF licences, networking, egress, backup, support and taxes."]),
+    basic: basicOn(),
     fileName: base.fileName.replace("OCVS_Sizing_", "OCVS_Sizing_Summary_")
   };
 }
@@ -1121,9 +1124,9 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   const save = (r, p, mult) => { if (p === "ocvs" || !base) return "—"; const d = (r.plan.total - base.plan.total) * mult;
     return `<span class="${d >= 0 ? "sv" : "ls"}">${d >= 0 ? "" : "−"}${money(Math.abs(d))} (${Math.round(Math.abs(d) / (r.plan.total * mult) * 100)}%)</span>`; };
   const shortTerm = term === "od" ? "On-demand" : T.label.split(",")[0];
-  const lvl = view === 3 ? `<div class="seg lvl" role="group" aria-label="Level of detail"><button data-lvl="basic" aria-pressed="${detail === "basic"}">Basic</button><button data-lvl="detailed" aria-pressed="${detail === "detailed"}">Detailed</button></div>` : "";
+  const lvl = lvlSwitch();
   let h = `<section class="t2"><div class="t2head"><div><h2>${clName ? clName + "comparison" : "Comparison"}</h2><span class="muted">${T.label} · ${hours} h/month · BYOL</span></div>${lvl}${pptBtns}</div>
-  ${view === 3 ? `<p class="lvlnote">${detail === "basic" ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail, as in View 2. Download PPT gives the full deck."}</p>` : ""}
+  ${lvlNote()}
   <div class="tbl"><table class="cmp"><thead><tr><th>Sizing / pricing</th>${cols.map(p => `<th class="${p === "ocvs" ? "base" : ""}">${P.providers[p].name}${ranked[0] === p && cols.length > 1 ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
   ${basicOn() ? `${sec("Recommended configuration")}
   ${row("Region", (r, p) => esc(regionName(p, ctx[p].region)))}
@@ -1178,15 +1181,19 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   return h;
 }
 function setView(v){
-  view = v; document.body.classList.toggle("v2", v >= 2);   // View 3 uses the View 2 style
+  view = v; document.body.classList.toggle("v2", v >= 2);
   document.querySelectorAll("[data-view]").forEach(a => a.setAttribute("aria-current", +a.dataset.view === v ? "page" : "false"));
   try { history.replaceState(null, "", v > 1 ? "?view=" + v : location.pathname); } catch (e) {}
   if (last) render();
 }
-let view = ({"2": 2, "3": 3})[new URLSearchParams(location.search).get("view")] || 1;
-// View 3: a copy of View 2 with a Basic / Detailed switch. Basic shows (and downloads) only the configuration and price.
+let view = ({"2": 2, "3": 2})[new URLSearchParams(location.search).get("view")] || 1;
+// Both views have a Basic / Detailed switch. Basic shows (and downloads) a shorter summary; Detailed shows everything.
 let detail = "basic";
-const basicOn = () => view === 3 && detail === "basic";
+const basicOn = () => detail === "basic";
+const lvlSwitch = () => `<div class="seg lvl" role="group" aria-label="Level of detail"><button data-lvl="basic" aria-pressed="${detail === "basic"}">Basic</button><button data-lvl="detailed" aria-pressed="${detail === "detailed"}">Detailed</button></div>`;
+const lvlNote = () => `<p class="lvlnote">${view >= 2
+  ? (basicOn() ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail. Download PPT gives the full deck.")
+  : (basicOn() ? "<b>Basic:</b> the price, configuration and what you get on each cloud. Download PPT gives a one-slide summary." : "<b>Detailed:</b> adds the nodes needed per resource and the comparison of every shape. Download PPT adds the recommended-configuration slide.")}</p>`;
 document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preventDefault(); setView(+a.dataset.view); });
 
 // ---------- init ----------

@@ -2,10 +2,9 @@
 
 ## â–¶ Open the tool: **https://lvaibhavt.github.io/ocvs-sizing-tool/**
 
-Three layouts, same inputs and numbers (switch at the top of the page):
-- **View 1 Â· Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/
-- **View 2 Â· Table** (navy/gold comparison table, like VMware Cloud Pricing Compare): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2
-- **View 3 Â· Summary**: View 2 with a **Basic / Detailed** switch. Basic shows the region, recommended configuration, node count and what it is sized by, total cores / RAM and usable storage, per-node, storage, monthly, 12-month and term price, and the savings with OCVS; Detailed is the full View 2. **Download PPT** follows the switch (single-cluster and consolidated decks): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=3
+Two layouts, same inputs and numbers (switch at the top of the page). Both have a **Basic / Detailed** switch, and **Download PPT** follows it:
+- **View 1 · Cards** (default): https://lvaibhavt.github.io/ocvs-sizing-tool/ . Basic hides the nodes-per-resource detail and the shape comparison, and the PPT is a one-slide summary; Detailed shows everything, and the PPT adds the recommended-configuration slide.
+- **View 2 · Table** (navy/gold comparison table): https://lvaibhavt.github.io/ocvs-sizing-tool/?view=2 . Basic shows the region, configuration, nodes, what it is sized by, total cores / RAM, usable storage, the prices and the savings with OCVS; Detailed is the full table.
 
 This tool sizes a VMware workload by host shape across four clouds:
 
