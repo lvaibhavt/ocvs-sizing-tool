@@ -686,6 +686,11 @@ function soRate(region, soId, term){
   const arr = reg && (reg.avail["gcve-so"] || {})[soId];
   return arr ? arr[{od:0,"1yr":1,"3yr":2}[term]] : undefined;
 }
+const OCVS_BOOT_GB = 164, OCVS_RESERVED_GB = 8192;
+function ocvsVolRate(region){
+  const c = storageChoices("ocvs", region).find(c => c.opt.id === "oci-block" && c.t.id === "10");
+  return c ? c.price : 0.0425;
+}
 function priceShape(s,req,a,ctx){
   const pc = ctx[s.p], listRate = (pc.rates[s.id] || {})[ctx.term];
   // the discount applies to the whole price: hosts here, storage below
@@ -709,7 +714,10 @@ function priceShape(s,req,a,ctx){
       if (typeof r !== "number") continue;
       pl.soEach = r*ctx.hours*(1-pc.disc); pl.stoCost = pl.so*pl.soEach;
     } else pl.stoCost = storageCost(pc.storage, pl.ext, ctx.hours)*(1-pc.disc);
-    pl.total = pl.nodeCost + pl.stoCost;
+    // OCVS also bills a boot volume on every host, and the 8 TB volume reserved for the VMware deployment
+    // on the management cluster only (Balanced Block Volume, as in Oracle's cost estimator)
+    pl.ovh = s.p === "ocvs" ? (pl.hosts*OCVS_BOOT_GB + (ctx.mgmt ? OCVS_RESERVED_GB : 0)) * ocvsVolRate(pc.region) * (1-pc.disc) : 0;
+    pl.total = pl.nodeCost + pl.stoCost + pl.ovh;
     if (!best || pl.total < best.total) best = pl;
   }
   if (!best) return {s, need, plan:cands[0], na:"No price for the chosen storage in this region / term"};
@@ -772,7 +780,7 @@ function baseOf(k){
 function allClusters(){
   if (!multiOn() || !last) return null;
   const list = clusterIds().map(id => { const b = baseOf(id);
-    return {id, name: clusterName(id), full: clusterFull(id), res: id === cur ? last : (b ? compute(b, (store[id] && store[id].pick) || {}) : null)}; });
+    return {id, name: clusterName(id), full: clusterFull(id), res: id === cur ? last : (b ? compute(b, (store[id] && store[id].pick) || {}, id === "mgmt") : null)}; });
   return {list, missing: list.filter(c => !c.res).map(c => c.name)};
 }
 function renderTabs(){
@@ -798,13 +806,13 @@ function update(){
   summaries(); renderTabs();
   const base = currentBase();
   if (!base) { last = null; $("out").innerHTML = `<div class="panel empty" style="margin-top:24px">Upload an RVTools report${multiOn() ? ` for ${esc(clusterName(cur))}` : ""} to see sizing and prices.</div>`; return; }
-  last = compute(base, pick);
+  last = compute(base, pick, cur === "mgmt");
   render();
 }
-function compute(base, pk){
+function compute(base, pk, mgmt = true){
   const a = assumptions(), g = 1 + a.growth;
   const req = {cpu:base.cpu*g, ram:base.ram*g, sto:base.sto*g};
-  const term = $("term").value, hours = +eff("hours"), ctx = {term, hours};
+  const term = $("term").value, hours = +eff("hours"), ctx = {term, hours, mgmt};
   for (const p of ORDER) {
     const region = $("reg_"+p).value, rates = {};
     for (const s of Calc.listShapes(P, p, region, {evsBasis:$("evsBasis").value})) rates[s.id] = s.rates;
@@ -1047,7 +1055,7 @@ function card(p, rank, r, cheap, ocvs, months){
    ${pl.kind === "so" ? `<div class="ext">+ <b>${pl.so} × ${pl.soId}</b> storage-only nodes (${pl.soRaw} TB raw each) at ${money(pl.soEach)} = <b>${money(pl.stoCost)}/mo</b></div>` : ""}
    ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span>${minNote(st, pl.ext) ? `<div class="minnote">⚠ ${minNote(st, pl.ext)} <a href="#src-avs-min">Why?</a></div>` : ""}</div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
-   <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
+   <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost+(pl.ovh||0)?money(pl.stoCost+(pl.ovh||0)):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
    ${`<button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button>`}</div>`;
 }
 
@@ -1060,7 +1068,7 @@ function drill(p){
     return `<tr data-pick="${p}|${esc(r.s.id)}" class="${r===sel?"sel":""}"><td><b>${esc(r.s.label)}</b>${r===cheap?`<span class="tag">Cheapest</span>`:""}${r===sel&&r!==cheap?`<span class="tag o">Selected</span>`:""}<br><span class="spec">${r.s.cores} cores · ${fmt(r.s.ram)} GB · ${r.s.raw?r.s.raw+" TB vSAN":"no vSAN"}</span></td>
     ${cell(n.cpu, d==="CPU")}${cell(n.ram, d==="RAM")}${cell(n.sto, d==="Storage")}<td class="num">+${n.ha} / ${n.min}${d==="Minimum"?" ◂":""}</td>
     <td class="num"><b>${pl.hosts}</b></td><td>${pl.kind==="vsan"?"vSAN":pl.kind==="so"?`+ ${pl.so} storage-only`:`+ ${pl.ext.toFixed(0)} TB ext.`}</td>
-    ${r.na ? `<td class="na" colspan="3">${r.na}</td>` : `<td class="num">${money(pl.nodeCost)}</td><td class="num">${pl.stoCost?money(pl.stoCost):"–"}</td><td class="num"><b>${money(pl.total)}</b></td>`}</tr>`; }).join("")}
+    ${r.na ? `<td class="na" colspan="3">${r.na}</td>` : `<td class="num">${money(pl.nodeCost)}</td><td class="num">${pl.stoCost+(pl.ovh||0)?money(pl.stoCost+(pl.ovh||0)):"–"}</td><td class="num"><b>${money(pl.total)}</b></td>`}</tr>`; }).join("")}
   </tbody></table></div>`;
 }
 
@@ -1134,6 +1142,7 @@ function deckModel(){
     {section:`${T.short} PRICING`},
     row("Per node / month", r => money(r.rate * hours)),
     row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
+    row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
     ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
@@ -1151,6 +1160,7 @@ function deckModel(){
     row("Per node / month", r => money(r.rate * hours)),
     row("Hosts / month", r => money(r.plan.nodeCost)),
     row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
+    row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
     ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
@@ -1201,6 +1211,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${sec(`${T.short} pricing`)}
   ${row("Per node / month", r => money(r.rate * hours))}
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
+  ${row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
@@ -1229,6 +1240,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row("Per node / month", r => money(r.rate * hours))}
   ${row("Hosts / month", r => money(r.plan.nodeCost))}
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
+  ${row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
