@@ -851,7 +851,7 @@ function render(){
      <div class="tr"><div class="fl" style="width:${shown[p].plan.total/max*100}%;background:${COLOR[p]}"></div></div><span class="val num">${money(shown[p].plan.total)}/mo</span></div>`).join("")}</div></div>`;
 
   h += `<div class="cards">` + activeClouds().map(p => card(p, ranked.indexOf(p), shown[p], cheapest[p], shown.ocvs, months)).join("") + `</div>`;
-  if (openDrill && !basicOn()) h += drill(openDrill);
+  if (openDrill) h += drill(openDrill);
   $("out").innerHTML = h + consPanel();
   bindOut(cheapest);
 }
@@ -1048,7 +1048,7 @@ function card(p, rank, r, cheap, ocvs, months){
    ${pl.ext ? `<div class="ext">+ <b>${pl.ext.toFixed(1)} TB</b> ${esc(st.name)} · ${esc(st.tier)} = <b>${money(pl.stoCost)}/mo</b>${st.opt.id.startsWith("fsx")?" (throughput not included)":""}<br><span style="color:var(--muted)">${perfText(st, pl.ext)}</span>${minNote(st, pl.ext) ? `<div class="minnote">⚠ ${minNote(st, pl.ext)} <a href="#src-avs-min">Why?</a></div>` : ""}</div>` : ""}
    <div class="specs num"><div>Cores<b>${fmt(pl.hosts*r.s.cores)}</b></div><div>RAM<b>${fmt(pl.hosts*r.s.ram/1024)} TB</b></div><div>vSAN usable<b>${r.s.raw?pl.usable.toFixed(0)+" TB":"–"}</b></div></div>
    <div class="specs num"><div>Hosts<b>${money(pl.nodeCost)}</b></div><div>Storage<b>${pl.stoCost?money(pl.stoCost):"–"}</b></div><div>${months} months<b>${kmoney(pl.total*months)}</b></div></div>
-   ${basicOn() ? "" : `<button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button>`}</div>`;
+   ${`<button class="drill" data-drill="${p}">${openDrill===p?"Hide shapes ▴":`Compare all ${last.by[p].length} shapes ▾`}</button>`}</div>`;
 }
 
 function drill(p){
@@ -1237,9 +1237,9 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   if (base && view !== 3) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
       : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
-  if (!basicOn()) h += `<div class="shapebar"><span>Compare every shape:</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div>`;
+  h += `<div class="shapebar"><span>${basicOn() ? "Choose a different shape:" : "Compare every shape:"}</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div>`;
   h += `</section>`;
-  if (openDrill && !basicOn()) h += drill(openDrill);
+  if (openDrill) h += drill(openDrill);
   return h;
 }
 function setView(v){
@@ -1254,7 +1254,7 @@ let detail = "basic";
 const basicOn = () => detail === "basic";
 const lvlSwitch = () => `<div class="seg lvl" role="group" aria-label="Level of detail"><button data-lvl="basic" aria-pressed="${detail === "basic"}">Basic</button><button data-lvl="detailed" aria-pressed="${detail === "detailed"}">Detailed</button></div>`;
 const lvlNote = () => `<p class="lvlnote">${view >= 2
-  ? (basicOn() ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail. Download PPT gives the full deck.")
+  ? (basicOn() ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Use the shape buttons at the bottom to pick a different shape instead of the cheapest. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail. Download PPT gives the full deck.")
   : (basicOn() ? "<b>Basic:</b> the price, configuration and what you get on each cloud. Download PPT gives a one-slide summary." : "<b>Detailed:</b> adds the nodes needed per resource and the comparison of every shape. Download PPT adds the recommended-configuration slide.")}</p>`;
 document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preventDefault(); setView(+a.dataset.view); });
 
