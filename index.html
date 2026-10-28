@@ -859,6 +859,7 @@ function consPanel(){
   ${row("Total nodes", x => `${x.hosts}${x.so ? ` + ${x.so} storage-only` : ""}`, "tot")}
   ${row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`)}
   ${row("Total / month", x => `<b>${money(x.total)}</b>`, "tot")}
+  ${months !== 12 ? row("12-month total", x => `<b>${kmoney(x.total * 12)}</b>`, "tot") : ""}
   ${row(`${months}-month total`, x => `<b>${kmoney(x.total * months)}</b>`, "tot")}
   ${base && many ? row("vs OCVS", vs) : ""}
   </tbody></table></div>`;
@@ -882,7 +883,8 @@ function consModel(){
   const row = (label, f, o = {}) => ({label, cells: c.cols.map(p => f(c.per[p], p)), ...o});
   const clusterRows = c.list.map((cl, i) => row(cl.full, x => `${x.parts[i].cfg} · ${money(x.parts[i].total)}/mo`));
   const totalRows = [row("Total nodes", nodes), row("Total cores / RAM", x => `${fmt(x.cores)} / ${ramText(x.ram)}`),
-    row("Total / month", x => money(x.total), {strong:true}), row(`${months}-month total`, x => money(x.total * months), {strong:true}),
+    row("Total / month", x => money(x.total), {strong:true}), ...(months !== 12 ? [row("12-month total", x => money(x.total * 12), {strong:true})] : []),
+    row(`${months}-month total`, x => money(x.total * months), {strong:true}),
     ...(base && many ? [{section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (x, p) => save(x, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (x, p) => save(x, p, months), {savings:true})] : [])];
   const tbl = {subtitle: `${n} clusters: management + ${n - 1} workload  |  ${T.label} · ${hours} h/month · BYOL`, badge: T.short, heads: c.cols.map(p => P.providers[p].name), notes};
   const SEC = "CLUSTERS · CONFIGURATION AND MONTHLY COST";
@@ -1063,6 +1065,7 @@ function deckModel(){
     row("Hosts / month", r => money(r.plan.nodeCost)),
     row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
+    ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
   ];
   if (base && cols.length > 1) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
@@ -1122,6 +1125,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row("Hosts / month", r => money(r.plan.nodeCost))}
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
+  ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
   ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}
   </tbody></table></div>`;
