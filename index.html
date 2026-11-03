@@ -9,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202611031000"></script>
+<script src="js/ppt.js?v=202611031100"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202611031000"></script>
-<script src="data/prices.js?v=202611031000"></script>
-<script src="data/gcp_vcf.js?v=202611031000"></script>
-<script src="js/data.js?v=202611031000"></script>
+<script src="data/catalog.js?v=202611031100"></script>
+<script src="data/prices.js?v=202611031100"></script>
+<script src="data/gcp_vcf.js?v=202611031100"></script>
+<script src="js/data.js?v=202611031100"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -638,7 +638,16 @@ function summariseRv(){
 const rvLine = () => rv ? `<b>${esc(rv.name)}</b> · ${rv.vms} VMs · ${fmt(rv.cpu)} vCPU · ${fmt(rv.ram)} GB · ${rv.sto.toFixed(1)} TB` : "";
 
 // ---------- sizing ----------
-function vsanUsable(s,hosts,a){ const pol = hosts >= POL[a.pol].min ? POL[a.pol] : POL.r1; return {per:s.raw*(1-a.slack)/pol.f*a.dedup, pol:pol.l}; }
+// VCF on Amazon EVS and on Google Z3 (View 4) uses vSAN ESA: no cache tier, and RAID-5 is 2+1 (1.5×) on
+// 3-5 hosts and 4+1 (1.25×) on 6 or more; RAID-6 is 4+2 (1.5×) from 6 hosts
+const esaOn = p => p === "evs" || (p === "gcve" && view >= 4);
+function esaPol(pol, hosts){
+  if (pol === "r6" && hosts >= 6) return {f:1.5, l:"RAID-6 (ESA 4+2)"};
+  if (pol !== "r1" && hosts >= 6) return {f:1.25, l:"RAID-5 (ESA 4+1)"};
+  if (pol !== "r1" && hosts >= 3) return {f:1.5, l:"RAID-5 (ESA 2+1)"};
+  return POL.r1;
+}
+function vsanUsable(s,hosts,a){ const pol = esaOn(s.p) ? esaPol(a.pol, hosts) : hosts >= POL[a.pol].min ? POL[a.pol] : POL.r1; return {per:s.raw*(1-a.slack)/pol.f*a.dedup, pol:pol.l}; }
 // Nodes needed for each resource on its own, then the cheaper of two plans
 function size(s,req,a){
   const cpuN = Math.max(1, Math.ceil(req.cpu/(s.cores*a.ratio)));
@@ -1340,6 +1349,7 @@ $("sources").innerHTML = `
    ${view >= 4 ? `<div class="sc" style="--c:var(--gcve)"><h3>VMware solution on Google Cloud (VCF)</h3><ul>
     <li><b>Hosts:</b> z3-highmem-192-highlssd-metal (96 cores / 192 threads, 1,536 GiB, 72 TB NVMe for vSAN ESA), the only Google shape that runs VCF (${L("Google Cloud blog", "https://cloud.google.com/blog/products/infrastructure-modernization/vmware-solution-on-google-cloud")}). Prices from ${L("Compute Engine storage-optimized pricing", "https://cloud.google.com/products/compute/pricing/storage-optimized")}: on-demand, and 1-year / 3-year <b>resource-based CUDs</b> (cheaper than flexible CUDs). VCF BYOL. Google Cloud VMware Engine (ve1/ve2) shapes are not shown because they don't run VCF.</li>
     <li><b>Boot disk:</b> 10 GiB Hyperdisk Balanced per node (${L("disk pricing", "https://cloud.google.com/compute/disks-image-pricing")}). <b>Storage:</b> ${L("NetApp Volumes pricing", "https://cloud.google.com/netapp/volumes/pricing")}, where available. Check it in the ${L("Google Cloud pricing calculator", "https://cloud.google.com/products/calculator")} (it uses 730 hours a month; set Hours per month to 730 to match it).</li>
+    <li><b>vSAN ESA:</b> all drives are capacity (no cache tier). RAID-5 is 2+1 (1.5×) on 3-5 nodes and 4+1 (1.25×) on 6 or more.</li>
     <li><b>Rules:</b> minimum 3 nodes. Prices are listed for every region Google prices Z3; the offering is generally available in 22 regions, so check availability in yours.</li>
    </ul></div>` : `<div class="sc" style="--c:var(--gcve)"><h3>Google Cloud VMware Engine</h3><ul>
     <li><b>Hosts and storage-only nodes:</b> ${L("VMware Engine pricing", "https://cloud.google.com/vmware-engine/pricing")} (per region: on-demand, 1-year and 3-year monthly-payment prices).</li>
@@ -1349,6 +1359,7 @@ $("sources").innerHTML = `
    <div class="sc" style="--c:var(--evs)"><h3>Amazon Elastic VMware Service</h3><ul>
     <li><b>Hosts:</b> ${L("EVS pricing", "https://aws.amazon.com/evs/pricing/")} (EVS fee per host-hour) + the EC2 bare-metal instance price: ${L("EC2 on-demand", "https://aws.amazon.com/ec2/pricing/on-demand/")}, ${L("EC2 Instance Savings Plans", "https://aws.amazon.com/savingsplans/compute-pricing/")} for 1 and 3 years (no upfront; the default), or ${L("Dedicated Hosts", "https://aws.amazon.com/ec2/dedicated-hosts/pricing/")}. Data from the ${L("AWS Price List", "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEVS/current/region_index.json")}.</li>
     <li><b>Storage:</b> ${L("FSx for NetApp ONTAP pricing", "https://aws.amazon.com/fsx/netapp-ontap/pricing/")}. Only SSD capacity is included; throughput capacity and extra IOPS cost more. Check it in the ${L("AWS pricing calculator", "https://calculator.aws/")}.</li>
+    <li><b>vSAN ESA:</b> all drives are capacity (no cache tier). RAID-5 is 2+1 (1.5×) on 4-5 hosts and 4+1 (1.25×) on 6 or more.</li>
     <li><b>Rules:</b> minimum 4 hosts per cluster (${L("EVS FAQs", "https://aws.amazon.com/evs/faqs/")}).</li>
    </ul></div>
   </div>
