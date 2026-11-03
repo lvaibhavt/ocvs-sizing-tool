@@ -9,11 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202610281626"></script>
+<script src="js/ppt.js?v=202611031000"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202610281626"></script>
-<script src="data/prices.js?v=202610281626"></script>
-<script src="js/data.js?v=202610281626"></script>
+<script src="data/catalog.js?v=202611031000"></script>
+<script src="data/prices.js?v=202611031000"></script>
+<script src="data/gcp_vcf.js?v=202611031000"></script>
+<script src="js/data.js?v=202611031000"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -318,7 +319,7 @@ body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
-  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · At a glance</a></nav>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · At a glance</a><a href="?view=4" data-view="4">View 4 · VCF (updated)</a></nav>
 </div></header>
 
 <main class="main">
@@ -508,7 +509,7 @@ function fillStorage(p){
   const list = storageChoices(p, $("reg_"+p).value);
   const cur = $("st_"+p).value || "auto";
   $("st_"+p).innerHTML = `<option value="auto">Base configuration (default)</option><option value="">None: vSAN on hosts only</option>` +
-    (p === "gcve" ? `<option value="so">Storage-only vSAN nodes (ve2, matching size class)</option>` : "") +
+    (p === "gcve" && view < 4 ? `<option value="so">Storage-only vSAN nodes (ve2, matching size class)</option>` : "") +
     list.map(c => `<option value="${c.key}">${esc(c.name)} (${c.kind === "block" ? "block" : "NFS"}) · ${esc(c.tier)}</option>`).join("");
   $("st_"+p).value = [...$("st_"+p).options].some(o => o.value === cur) ? cur : "auto";
 }
@@ -539,7 +540,7 @@ function storageDetails(p, hours, term){
 function baseStorageText(hours){
   return activeClouds().map(p => { const c = cheapestChoice(p, P.providers[p].defaultRegion, hours);
     const t = c ? `${c.name} ${c.tier}` : "vSAN only";
-    return `<b>${P.providers[p].name}</b> ${esc(t)}${p === "gcve" ? " or storage-only vSAN nodes" : ""}`; }).join(" · ");
+    return `<b>${P.providers[p].name}</b> ${esc(t)}${p === "gcve" && view < 4 ? " or storage-only vSAN nodes" : ""}`; }).join(" · ");
 }
 const regionName = (p, id) => (P.providers[p].regions.find(r => r.id === id) || {name:id}).name;
 const links = o => (o.links || []).length ? `<p class="lk">${o.links.map(([l,u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join(" · ")}</p>` : "";
@@ -716,7 +717,9 @@ function priceShape(s,req,a,ctx){
     } else pl.stoCost = storageCost(pc.storage, pl.ext, ctx.hours)*(1-pc.disc);
     // OCVS also bills a boot volume on every host, and the 8 TB volume reserved for the VMware deployment
     // on the management cluster only (Balanced Block Volume, as in Oracle's cost estimator)
-    pl.ovh = s.p === "ocvs" ? (pl.hosts*OCVS_BOOT_GB + (ctx.mgmt ? OCVS_RESERVED_GB : 0)) * ocvsVolRate(pc.region) * (1-pc.disc) : 0;
+    pl.ovh = s.p === "ocvs" ? (pl.hosts*OCVS_BOOT_GB + (ctx.mgmt ? OCVS_RESERVED_GB : 0)) * ocvsVolRate(pc.region) * (1-pc.disc)
+      // View 4: Google bills each Z3 node's boot disk (Hyperdisk Balanced) per GiB-hour
+      : s.p === "gcve" && window.GCP_VCF ? pl.hosts * GCP_VCF.bootGiB * (GCP_VCF.bootRate[pc.region] || 0) * ctx.hours * (1-pc.disc) : 0;
     pl.total = pl.nodeCost + pl.stoCost + pl.ovh;
     if (!best || pl.total < best.total) best = pl;
   }
@@ -845,7 +848,7 @@ function render(){
    ${basicOn() ? (disc ? `<div class="req" style="margin-top:8px">${disc}</div>` : "") : `<div class="req" style="margin-top:8px">${used}${disc}</div>`}`;
 
   if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
-  if (view >= 2) { $("out").innerHTML = h + (view === 3 ? glanceHtml(glanceItems(ranked.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months), `Monthly cost on each cloud, cheapest first · ${Calc.TERMS[term].label} · BYOL`) : "") + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
+  if (view >= 2) { $("out").innerHTML = h + (view >= 3 ? glanceHtml(glanceItems(ranked.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months), `Monthly cost on each cloud, cheapest first · ${Calc.TERMS[term].label} · BYOL`) : "") + tableView(ranked, months, clName, pptBtns) + consPanel(); bindOut(cheapest); return; }
   const w = ranked[0], wr = shown[w], second = ranked[1] ? shown[ranked[1]] : null;
   const max = Math.max(...ranked.map(p => shown[p].plan.total));
   h += `<div class="sec"><div><h2>${clName ? clName + "result" : "Result"}</h2><p>${Calc.TERMS[term].label} · ${hours} h/month · BYOL (VCF licence not included)</p></div><div class="hdr-r">${lvlSwitch()}${pptBtns}</div></div>
@@ -925,7 +928,7 @@ function consPanel(){
   const row = (l, f, cls = "") => `<tr class="${cls}"><th scope="row">${l}</th>${c.cols.map(p => `<td>${f(c.per[p], p)}</td>`).join("")}</tr>`;
   const vs = (x, p) => { if (p === "ocvs" || !base) return "—"; const d = x.total - base.total;
     return `<span class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${money(Math.abs(d))}/mo (${d >= 0 ? "+" : "−"}${Math.round(Math.abs(d) / base.total * 100)}%)</span>`; };
-  const g = view === 3 ? glanceHtml(glanceItems(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${c.per[p].hosts}${c.per[p].so ? ` + ${c.per[p].so}` : ""} nodes`})), months),
+  const g = view >= 3 ? glanceHtml(glanceItems(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${c.per[p].hosts}${c.per[p].so ? ` + ${c.per[p].so}` : ""} nodes`})), months),
     `${allWord(n)[0].toUpperCase() + allWord(n).slice(1)} together: monthly cost on each cloud, cheapest first`, `Cost at a glance: ${allWord(n)}`) : "";
   return g + `<div class="sec"><div><h2>Consolidated: ${allWord(n)}</h2><p>Management + ${n - 1} workload cluster${n > 2 ? "s" : ""}, lowest-cost configuration on each cloud. ${many ? `Lowest total: <b>${P.providers[c.ranked[0]].name}</b>.` : ""}</p></div><div class="btns"><button class="pptb alt" data-pptall>Download consolidated PPT</button></div></div>
   <div class="panel" style="padding:0;overflow:hidden"><table class="fit cons"><thead><tr><th>${n} clusters</th>${c.cols.map(p => `<th><span class="dot" style="background:${COLOR[p]}"></span> ${P.providers[p].name}${c.ranked[0] === p && many ? " ★" : ""}</th>`).join("")}</tr></thead><tbody>
@@ -973,10 +976,10 @@ function consModel(){
     slides.push({kind: view >= 2 ? "main" : !many ? "single" : basicOn() ? "summary" : "cards", model:m}); });
   if (view >= 2) {
     // with savings rows and callouts to fit as well, the cluster list moves to its own slide sooner
-    const cg = view === 3 ? glanceSlide(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${nodes(c.per[p])} nodes`})), months, `Cost at a glance: ${word}`,
+    const cg = view >= 3 ? glanceSlide(c.cols.map(p => ({p, total: c.per[p].total, config: `${n} clusters · ${nodes(c.per[p])} nodes`})), months, `Cost at a glance: ${word}`,
       `${Word} together: monthly cost on each cloud, cheapest first · ${T.label} · BYOL`, T.short) : null;
     if (cg) slides.push({kind:"glance", model:cg});
-    const co = view === 3 ? [] : callouts;   // View 3 shows the savings on the glance slide
+    const co = view >= 3 ? [] : callouts;   // View 3 shows the savings on the glance slide
     if (n <= (many ? 4 : 6)) slides.push({kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts: co, rows:[{section: SEC}, ...clusterRows, {section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
     else slides.push(...breakdown(8), {kind:"main", model:{...tbl, title:`Consolidated: ${word}`, callouts: co, rows:[{section:`CONSOLIDATED · ${word.toUpperCase()}`}, ...totalRows]}});
   } else {
@@ -1142,7 +1145,7 @@ function deckModel(){
     {section:`${T.short} PRICING`},
     row("Per node / month", r => money(r.rate * hours)),
     row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
-    row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
+    row(view >= 4 ? "Boot disks (+ OCVS reserved) / month" : "Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
     ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
@@ -1160,18 +1163,18 @@ function deckModel(){
     row("Per node / month", r => money(r.rate * hours)),
     row("Hosts / month", r => money(r.plan.nodeCost)),
     row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—"),
-    row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
+    row(view >= 4 ? "Boot disks (+ OCVS reserved) / month" : "Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—"),
     row("Total / month", r => money(r.plan.total), {strong:true}),
     ...(months !== 12 ? [row("12-month total", r => money(r.plan.total * 12), {strong:true})] : []),
     row(`${months}-month total`, r => money(r.plan.total * months), {strong:true})
   ];
   if (base && cols.length > 1) rows.push({section:"OCVS SAVINGS"}, row("Monthly savings with OCVS", (r, p) => save(r, p, 1), {savings:true}), row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months), {savings:true}));
-  const callouts = base && view !== 3 ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+  const callouts = base && view < 3 ? cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? {positive:true, title:`${pct}% lower than ${P.providers[p].name}`, sub:`Save ${kmoney(d * months)} over ${months} months`}
       : {positive:false, title:`${pct}% higher than ${P.providers[p].name}`, sub:`${kmoney(-d * months)} more over ${months} months`}; }) : [];
   return {
     heads: cols.map(p => P.providers[p].name), rows, callouts,
-    glance: view === 3 ? glanceSlide(cols.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months, "Cost at a glance",
+    glance: view >= 3 ? glanceSlide(cols.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months, "Cost at a glance",
       `Monthly cost on each cloud, cheapest first · ${T.label} · ${hours} h/month · BYOL`, T.short) : null,
     subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+eff("aGrowth") ? ` (after ${eff("aGrowth")}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
@@ -1211,7 +1214,7 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${sec(`${T.short} pricing`)}
   ${row("Per node / month", r => money(r.rate * hours))}
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
-  ${row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
+  ${row(view >= 4 ? "Boot disks (+ OCVS reserved) / month" : "Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
@@ -1240,13 +1243,13 @@ function tableView(ranked, months, clName = "", pptBtns = `<button class="pptb" 
   ${row("Per node / month", r => money(r.rate * hours))}
   ${row("Hosts / month", r => money(r.plan.nodeCost))}
   ${row("Additional storage / month", r => r.plan.stoCost ? money(r.plan.stoCost) : "—")}
-  ${row("Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
+  ${row(view >= 4 ? "Boot disks (+ OCVS reserved) / month" : "Boot + reserved volumes / month", r => r.plan.ovh ? money(r.plan.ovh) : "—")}
   ${row("Total / month", r => `<b>${money(r.plan.total)}</b>`, "tot")}
   ${months !== 12 ? row("12-month total", r => `<b>${money(r.plan.total * 12)}</b>`, "tot") : ""}
   ${row(`${shortTerm} total (${months} months)`, r => `<b>${money(r.plan.total * months)}</b>`, "tot")}
   ${base && cols.length > 1 ? sec("OCVS savings") + row("Monthly savings with OCVS", (r, p) => save(r, p, 1)) + row(`${months}-month savings with OCVS`, (r, p) => save(r, p, months)) : ""}`}
   </tbody></table></div>`;
-  if (base && view !== 3) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
+  if (base && view < 3) h += `<div class="calls">${cols.filter(p => p !== "ocvs").map(p => { const r = shown[p], d = r.plan.total - base.plan.total, pct = Math.round(Math.abs(d) / r.plan.total * 100);
     return d >= 0 ? `<div class="callout"><strong>${pct}% lower than ${P.providers[p].name}</strong><span>Save ${kmoney(d * months)} over ${months} months${r.plan.hosts !== base.plan.hosts ? ` (${base.plan.hosts} vs ${r.plan.hosts} nodes)` : ""}</span></div>`
       : `<div class="callout neg"><strong>${pct}% higher than ${P.providers[p].name}</strong><span>${kmoney(-d * months)} more over ${months} months</span></div>`; }).join("")}</div>`;
   h += `<div class="shapebar"><span>${basicOn() ? "Choose a different shape:" : "Compare every shape:"}</span>${cols.map(p => `<button data-drill="${p}" class="${openDrill === p ? "on" : ""}">${P.providers[p].name}</button>`).join("")}</div>`;
@@ -1260,7 +1263,7 @@ function setView(v){
   try { history.replaceState(null, "", v > 1 ? "?view=" + v : location.pathname); } catch (e) {}
   if (last) render();
 }
-let view = ({"2": 2, "3": 3})[new URLSearchParams(location.search).get("view")] || 1;
+let view = ({"2": 2, "3": 3, "4": 4})[new URLSearchParams(location.search).get("view")] || 1;
 // Both views have a Basic / Detailed switch. Basic shows (and downloads) a shorter summary; Detailed shows everything.
 let detail = "basic";
 const basicOn = () => detail === "basic";
@@ -1268,7 +1271,9 @@ const lvlSwitch = () => `<div class="seg lvl" role="group" aria-label="Level of 
 const lvlNote = () => `<p class="lvlnote">${view >= 2
   ? (basicOn() ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Use the shape buttons at the bottom to pick a different shape instead of the cheapest. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail. Download PPT gives the full deck.")
   : (basicOn() ? "<b>Basic:</b> the price, configuration and what you get on each cloud. Download PPT gives a one-slide summary." : "<b>Detailed:</b> adds the nodes needed per resource and the comparison of every shape. Download PPT adds the recommended-configuration slide.")}</p>`;
-document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { e.preventDefault(); setView(+a.dataset.view); });
+// View 4 loads different Google data (data/gcp_vcf.js), so moving into or out of it reloads the page
+document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { const v = +a.dataset.view;
+  if ((v === 4) !== (view === 4)) return; e.preventDefault(); setView(v); });
 
 // ---------- init ----------
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
@@ -1321,7 +1326,8 @@ $("sources").innerHTML = `
   <p class="lead">Prices were fetched on <b>${P.asOf}</b> from each vendor's own price source. They're public list prices in USD, BYOL (the VMware Cloud Foundation licence is not included). Excluded: networking, egress, backup, support and taxes. Indicative only, not a quote.</p>
   <div class="sgrid2">
    <div class="sc" style="--c:var(--ocvs)"><h3>Oracle Cloud VMware Solution</h3><ul>
-    <li><b>Hosts:</b> Oracle's OCVS pricing reference: monthly price per node at 744 hours, with on-demand, 1-year and 3-year commitment prices. It's not published as a public web page; Oracle's public price list is ${L("oracle.com/cloud/price-list (VMware)", "https://www.oracle.com/cloud/price-list/#vmware")}.</li>
+    <li><b>Hosts (BYOL):</b> the bare-metal compute price from the ${L("Oracle Cloud price list", "https://www.oracle.com/cloud/price-list/#compute")} (per OCPU + per GB of memory + NVMe, e.g. BM.Standard.E5.192 = 192 × $0.03 + 2,304 × $0.002 = $10.368/hour), as the ${L("OCI cost estimator", "https://www.oracle.com/cloud/costestimator.html")} bills it. 1-year and 3-year prices apply the discounts in Oracle's OCVS pricing reference.</li>
+    <li><b>Boot and reserved volumes:</b> 164 GB boot volume per host, plus 8 TB reserved for the VMware deployment on the management cluster, both Balanced Block Volume, as in the OCI cost estimator.</li>
     <li><b>Block Volume / File Storage:</b> ${L("Oracle Cloud price list", "https://www.oracle.com/cloud/price-list/#block-volume")} (Block Volume $0.0255/GB-month + $0.0017 per VPU; Balanced = 10 VPU = $0.0425), via the ${L("price list API", "https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyCode=USD")}. Check it in the ${L("OCI cost estimator", "https://www.oracle.com/cloud/costestimator.html")}.</li>
     <li><b>Rules:</b> minimum 3 hosts per cluster (${L("OCVS overview", "https://docs.oracle.com/en-us/iaas/Content/VMware/Concepts/ocvsoverview.htm")}). Block Volume performance by level: ${L("Block Volume performance", "https://docs.oracle.com/en-us/iaas/Content/Block/Concepts/blockvolumeperformance.htm")}.</li>
    </ul></div>
@@ -1331,11 +1337,15 @@ $("sources").innerHTML = `
     <li id="src-avs-min" class="rule"><b>⚠ 16 TiB minimum for Elastic SAN with AVS:</b> Microsoft requires an Elastic SAN with at least <b>16 TiB of base capacity</b> to use it as an AVS datastore. See ${L("Use Azure Elastic SAN with Azure VMware Solution (prerequisites)", "https://learn.microsoft.com/en-us/azure/azure-vmware/configure-azure-elastic-san")}. So if you need less (e.g. 2.4 TB), this tool bills 16 TiB (16 × 1,024 GiB × $0.095 = $1,556/month in Germany West Central). The Azure calculator prices Elastic SAN on its own and doesn't apply this rule, which is why it shows less.</li>
     <li><b>Rules:</b> minimum 3 hosts per cluster (${L("AVS introduction", "https://learn.microsoft.com/en-us/azure/azure-vmware/introduction")}).</li>
    </ul></div>
-   <div class="sc" style="--c:var(--gcve)"><h3>Google Cloud VMware Engine</h3><ul>
+   ${view >= 4 ? `<div class="sc" style="--c:var(--gcve)"><h3>VMware solution on Google Cloud (VCF)</h3><ul>
+    <li><b>Hosts:</b> z3-highmem-192-highlssd-metal (96 cores / 192 threads, 1,536 GiB, 72 TB NVMe for vSAN ESA), the only Google shape that runs VCF (${L("Google Cloud blog", "https://cloud.google.com/blog/products/infrastructure-modernization/vmware-solution-on-google-cloud")}). Prices from ${L("Compute Engine storage-optimized pricing", "https://cloud.google.com/products/compute/pricing/storage-optimized")}: on-demand, and 1-year / 3-year <b>resource-based CUDs</b> (cheaper than flexible CUDs). VCF BYOL. Google Cloud VMware Engine (ve1/ve2) shapes are not shown because they don't run VCF.</li>
+    <li><b>Boot disk:</b> 10 GiB Hyperdisk Balanced per node (${L("disk pricing", "https://cloud.google.com/compute/disks-image-pricing")}). <b>Storage:</b> ${L("NetApp Volumes pricing", "https://cloud.google.com/netapp/volumes/pricing")}, where available. Check it in the ${L("Google Cloud pricing calculator", "https://cloud.google.com/products/calculator")} (it uses 730 hours a month; set Hours per month to 730 to match it).</li>
+    <li><b>Rules:</b> minimum 3 nodes. Prices are listed for every region Google prices Z3; the offering is generally available in 22 regions, so check availability in yours.</li>
+   </ul></div>` : `<div class="sc" style="--c:var(--gcve)"><h3>Google Cloud VMware Engine</h3><ul>
     <li><b>Hosts and storage-only nodes:</b> ${L("VMware Engine pricing", "https://cloud.google.com/vmware-engine/pricing")} (per region: on-demand, 1-year and 3-year monthly-payment prices).</li>
     <li><b>Storage:</b> ${L("NetApp Volumes pricing", "https://cloud.google.com/netapp/volumes/pricing")} and ${L("Filestore pricing", "https://cloud.google.com/filestore/pricing")} (Zonal/Regional, custom performance off). Check them in the ${L("Google Cloud pricing calculator", "https://cloud.google.com/products/calculator")}.</li>
     <li><b>Rules:</b> minimum 3 nodes (${L("private clouds", "https://cloud.google.com/vmware-engine/docs/concepts-private-cloud")}). Storage-only nodes must match the size class of the cluster's nodes, and at most 50% of a cluster can be storage-only (${L("storage-only nodes", "https://cloud.google.com/vmware-engine/docs/concepts-storage-only-nodes")}).</li>
-   </ul></div>
+   </ul></div>`}
    <div class="sc" style="--c:var(--evs)"><h3>Amazon Elastic VMware Service</h3><ul>
     <li><b>Hosts:</b> ${L("EVS pricing", "https://aws.amazon.com/evs/pricing/")} (EVS fee per host-hour) + the EC2 bare-metal instance price: ${L("EC2 on-demand", "https://aws.amazon.com/ec2/pricing/on-demand/")}, ${L("EC2 Instance Savings Plans", "https://aws.amazon.com/savingsplans/compute-pricing/")} for 1 and 3 years (no upfront; the default), or ${L("Dedicated Hosts", "https://aws.amazon.com/ec2/dedicated-hosts/pricing/")}. Data from the ${L("AWS Price List", "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEVS/current/region_index.json")}.</li>
     <li><b>Storage:</b> ${L("FSx for NetApp ONTAP pricing", "https://aws.amazon.com/fsx/netapp-ontap/pricing/")}. Only SSD capacity is included; throughput capacity and extra IOPS cost more. Check it in the ${L("AWS pricing calculator", "https://calculator.aws/")}.</li>
