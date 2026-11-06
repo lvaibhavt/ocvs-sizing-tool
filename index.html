@@ -9,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="js/ppt.js?v=202611031100"></script>
+<script src="js/ppt.js?v=202611061000"></script>
 <!-- Specs (catalog.js) plus prices fetched from each vendor by tools/fetch_prices.py (prices.js) -->
-<script src="data/catalog.js?v=202611031100"></script>
-<script src="data/prices.js?v=202611031100"></script>
-<script src="data/gcp_vcf.js?v=202611031100"></script>
-<script src="js/data.js?v=202611031100"></script>
+<script src="data/catalog.js?v=202611061000"></script>
+<script src="data/prices.js?v=202611061000"></script>
+<script src="data/gcp_vcf.js?v=202611061000"></script>
+<script src="js/data.js?v=202611061000"></script>
 <style>
 :root{
   --bg:#f3f4f7;--card:#ffffff;--text:#15181d;--muted:#667080;--line:#e3e6eb;--soft:#f6f7f9;
@@ -84,6 +84,7 @@ select,.field input{padding:8px 10px;border:1px solid var(--line);border-radius:
 .sec h2{margin:0;font-size:20px;letter-spacing:-.01em}
 .sec p{margin:2px 0 0;color:var(--muted);font-size:13px}
 .req{display:flex;gap:8px;flex-wrap:wrap}
+.mgmtnote{margin-top:10px;padding:10px 14px;border-left:4px solid var(--ocvs);background:rgba(199,70,52,.07);border-radius:6px;font-size:13px;line-height:1.5}
 .pill{font-size:12.5px;padding:5px 10px;border-radius:99px;background:var(--card);border:1px solid var(--line)}
 .pill b{font-weight:700}
 .pill.chg{background:var(--chgbg);border-color:var(--chg);color:var(--chg)}
@@ -319,7 +320,7 @@ body.v2 .lvl button[aria-pressed="true"]{background:var(--navy);color:var(--gold
   <h1>Which cloud runs your VMware estate for less?</h1>
   <p>Drop in an RVTools report or type three numbers. Every host shape on four clouds is sized for CPU, RAM and storage, priced, and the cheapest fit comes out on top.</p>
   <div class="clouds" id="clouds"></div>
-  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · At a glance</a><a href="?view=4" data-view="4">View 4 · VCF (updated)</a></nav>
+  <nav class="views" aria-label="View"><a href="?view=1" data-view="1">View 1 · Cards</a><a href="?view=2" data-view="2">View 2 · Table</a><a href="?view=3" data-view="3">View 3 · At a glance</a><a href="?view=4" data-view="4">View 4 · VCF (updated)</a><a href="?view=5" data-view="5">View 5 · VCF + OCVS management</a></nav>
 </div></header>
 
 <main class="main">
@@ -701,11 +702,15 @@ function ocvsVolRate(region){
   const c = storageChoices("ocvs", region).find(c => c.opt.id === "oci-block" && c.t.id === "10");
   return c ? c.price : 0.0425;
 }
+// View 5: an OCVS SDDC deploys its management appliances (vCenter, NSX and so on) on the management cluster,
+// and they use 50 vCPU and 176 GB of RAM. Added to OCVS's requirement there, on top of the workload.
+const OCVS_MGMT = {cpu: 50, ram: 176};
+const ocvsMgmtOn = mgmt => view >= 5 && mgmt;
 function priceShape(s,req,a,ctx){
   const pc = ctx[s.p], listRate = (pc.rates[s.id] || {})[ctx.term];
   // the discount applies to the whole price: hosts here, storage below
   const rate = typeof listRate === "number" ? listRate * (1 - pc.disc) : listRate;
-  const {need, plans} = size(s,req,a);
+  const {need, plans} = size(s, s.p === "ocvs" && ocvsMgmtOn(ctx.mgmt) ? {...req, cpu: req.cpu + OCVS_MGMT.cpu, ram: req.ram + OCVS_MGMT.ram} : req, a);
   if (typeof rate !== "number") return {s, need, plan:plans[0], na:"No price in this region / term"};
   // "auto": cheapest of vSAN-only, hosts + cheapest storage, and (GCVE) storage-only nodes.
   // Otherwise the storage the user chose; vSAN-only when nothing extra is needed or nothing was chosen.
@@ -854,6 +859,7 @@ function render(){
   const pptBtns = `<div class="btns"><button class="pptb" data-ppt>${multiOn() ? "Download PPT (this cluster)" : "Download PPT"}</button>${multiOn() ? `<button class="pptb alt" data-pptall>Download consolidated PPT</button>` : ""}</div>`;
   let h = `<div class="sec"><div><h2>${clName ? clName + "requirement" : "Your requirement"}</h2><p>${+eff("aGrowth") ? `After ${eff("aGrowth")}% growth. ` : ""}${basicOn() ? "" : "Highlighted assumptions differ from the defaults."}</p></div></div>
    <div class="req"><span class="pill"><b>${fmt(req.cpu)}</b> vCPU</span><span class="pill"><b>${fmt(req.ram)}</b> GB RAM</span><span class="pill"><b>${req.sto.toFixed(1)}</b> TB storage</span></div>
+   ${ocvsMgmtOn(last.ctx.mgmt) && activeClouds().includes("ocvs") ? `<div class="mgmtnote"><b>OCVS adds ${OCVS_MGMT.cpu} vCPU and ${OCVS_MGMT.ram} GB RAM</b> to this requirement. When OCVS deploys an SDDC it runs its own management appliances (vCenter, NSX and so on) on the management cluster, and by default they use ${OCVS_MGMT.cpu} vCPU and ${OCVS_MGMT.ram} GB of RAM. Those resources aren't available to your workloads, so OCVS is sized for ${fmt(req.cpu + OCVS_MGMT.cpu)} vCPU and ${fmt(req.ram + OCVS_MGMT.ram)} GB RAM. Workload clusters don't get this addition.</div>` : ""}
    ${basicOn() ? (disc ? `<div class="req" style="margin-top:8px">${disc}</div>` : "") : `<div class="req" style="margin-top:8px">${used}${disc}</div>`}`;
 
   if (!ranked.length) { $("out").innerHTML = h + `<div class="panel empty" style="margin-top:16px">No shape has a price for these regions and this commitment.</div>`; return; }
@@ -1185,7 +1191,7 @@ function deckModel(){
     heads: cols.map(p => P.providers[p].name), rows, callouts,
     glance: view >= 3 ? glanceSlide(cols.map(p => ({p, total: shown[p].plan.total, config: cfgText(shown[p], p, ctx)})), months, "Cost at a glance",
       `Monthly cost on each cloud, cheapest first · ${T.label} · ${hours} h/month · BYOL`, T.short) : null,
-    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+eff("aGrowth") ? ` (after ${eff("aGrowth")}% growth)` : ""} · ${T.label} · ${hours} h/month · BYOL`,
+    subtitle: `Requirement: ${fmt(req.cpu)} vCPU · ${fmt(req.ram)} GB RAM · ${req.sto.toFixed(1)} TB storage${+eff("aGrowth") ? ` (after ${eff("aGrowth")}% growth)` : ""}${ocvsMgmtOn(ctx.mgmt) && cols.includes("ocvs") ? ` · OCVS +${OCVS_MGMT.cpu} vCPU / ${OCVS_MGMT.ram} GB for SDDC management` : ""} · ${T.label} · ${hours} h/month · BYOL`,
     badge: T.short,
     notes: ["Hosts priced BYOL (customer brings the VCF licence). Additional storage is pay-as-you-go.", "Indicative list prices. Excludes VCF licences, networking, egress, backup, support and taxes."],
     sources: [
@@ -1272,7 +1278,7 @@ function setView(v){
   try { history.replaceState(null, "", v > 1 ? "?view=" + v : location.pathname); } catch (e) {}
   if (last) render();
 }
-let view = ({"2": 2, "3": 3, "4": 4})[new URLSearchParams(location.search).get("view")] || 1;
+let view = ({"2": 2, "3": 3, "4": 4, "5": 5})[new URLSearchParams(location.search).get("view")] || 1;
 // Both views have a Basic / Detailed switch. Basic shows (and downloads) a shorter summary; Detailed shows everything.
 let detail = "basic";
 const basicOn = () => detail === "basic";
@@ -1280,9 +1286,9 @@ const lvlSwitch = () => `<div class="seg lvl" role="group" aria-label="Level of 
 const lvlNote = () => `<p class="lvlnote">${view >= 2
   ? (basicOn() ? "<b>Basic:</b> the recommended configuration on each cloud, what it gives you, and its price. Use the shape buttons at the bottom to pick a different shape instead of the cheapest. Download PPT gives the same summary." : "<b>Detailed:</b> every sizing and pricing detail. Download PPT gives the full deck.")
   : (basicOn() ? "<b>Basic:</b> the price, configuration and what you get on each cloud. Download PPT gives a one-slide summary." : "<b>Detailed:</b> adds the nodes needed per resource and the comparison of every shape. Download PPT adds the recommended-configuration slide.")}</p>`;
-// View 4 loads different Google data (data/gcp_vcf.js), so moving into or out of it reloads the page
+// Views 4 and 5 load different Google data (data/gcp_vcf.js), so moving into or out of them reloads the page
 document.querySelectorAll("[data-view]").forEach(a => a.onclick = e => { const v = +a.dataset.view;
-  if ((v === 4) !== (view === 4)) return; e.preventDefault(); setView(v); });
+  if ((v >= 4) !== (view >= 4)) return; e.preventDefault(); setView(v); });
 
 // ---------- init ----------
 $("clouds").innerHTML = ORDER.map(p => `<span class="cl"><span class="dot" style="background:${COLOR[p]}"></span>${P.providers[p].longName}</span>`).join("");
@@ -1336,6 +1342,7 @@ $("sources").innerHTML = `
   <div class="sgrid2">
    <div class="sc" style="--c:var(--ocvs)"><h3>Oracle Cloud VMware Solution</h3><ul>
     <li><b>Hosts (BYOL):</b> the bare-metal compute price from the ${L("Oracle Cloud price list", "https://www.oracle.com/cloud/price-list/#compute")} (per OCPU + per GB of memory + NVMe, e.g. BM.Standard.E5.192 = 192 × $0.03 + 2,304 × $0.002 = $10.368/hour), as the ${L("OCI cost estimator", "https://www.oracle.com/cloud/costestimator.html")} bills it. 1-year and 3-year prices apply the discounts in Oracle's OCVS pricing reference.</li>
+    ${view >= 5 ? `<li><b>SDDC management (View 5):</b> an OCVS SDDC runs its own management appliances (vCenter, NSX and so on) on the management cluster, using ${OCVS_MGMT.cpu} vCPU and ${OCVS_MGMT.ram} GB of RAM by default. View 5 adds them to OCVS's requirement for the management cluster.</li>` : ""}
     <li><b>Boot and reserved volumes:</b> 164 GB boot volume per host, plus 8 TB reserved for the VMware deployment on the management cluster, both Balanced Block Volume, as in the OCI cost estimator.</li>
     <li><b>Block Volume / File Storage:</b> ${L("Oracle Cloud price list", "https://www.oracle.com/cloud/price-list/#block-volume")} (Block Volume $0.0255/GB-month + $0.0017 per VPU; Balanced = 10 VPU = $0.0425), via the ${L("price list API", "https://apexapps.oracle.com/pls/apex/cetools/api/v1/products/?currencyCode=USD")}. Check it in the ${L("OCI cost estimator", "https://www.oracle.com/cloud/costestimator.html")}.</li>
     <li><b>Rules:</b> minimum 3 hosts per cluster (${L("OCVS overview", "https://docs.oracle.com/en-us/iaas/Content/VMware/Concepts/ocvsoverview.htm")}). Block Volume performance by level: ${L("Block Volume performance", "https://docs.oracle.com/en-us/iaas/Content/Block/Concepts/blockvolumeperformance.htm")}.</li>
